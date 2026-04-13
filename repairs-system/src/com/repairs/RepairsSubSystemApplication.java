@@ -1,11 +1,11 @@
 package com.repairs;
 
+import com.repairs.controllers.*;
 import com.repairs.entities.*;
 import com.repairs.enums.*;
 import com.repairs.external.*;
 import com.repairs.interfaces.model.*;
 import com.repairs.interfaces.view.*;
-import com.repairs.presenters.*;
 import com.repairs.repositories.*;
 import com.repairs.services.*;
 import com.repairs.views.*;
@@ -13,13 +13,15 @@ import com.repairs.views.*;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Scanner;
 
 /**
  * RepairsSubSystemApplication - Main application class.
  * Demonstrates dependency injection setup and system initialization.
  * 
  * Architecture:
- * - MVP Pattern (Model-View-Presenter)
+ * - MVC Pattern (Model-View-Controller)
  * - SOLID Principles
  * - GRASP Patterns
  * - Factory Pattern (for object creation)
@@ -31,6 +33,8 @@ import java.time.LocalDateTime;
 public class RepairsSubSystemApplication {
     
     // Services and dependencies
+    private final IDatabaseSubsystem databaseSubsystem;
+    private final IExceptionHandler exceptionHandler;
     private final IRepairRepository repository;
     private final IRepairValidator validator;
     private final IRepairScheduler scheduler;
@@ -42,28 +46,32 @@ public class RepairsSubSystemApplication {
     private final IInventoryConnector inventoryConnector;
     private final IRepairLogger logger;
 
-    // Presenters
-    private final RepairRequestPresenter repairRequestPresenter;
-    private final RepairExecutionPresenter executionPresenter;
-    private final BillingPresenter billingPresenter;
+    // MVC Controllers
+    private final RepairRequestController repairRequestController;
+    private final RepairExecutionController executionController;
+    private final BillingController billingController;
 
     /**
      * Constructor - Sets up all dependencies (Dependency Injection)
      */
     public RepairsSubSystemApplication() {
+        // Initialize integration adapters with defaults
+        this.databaseSubsystem = new DefaultDatabaseSubsystem();
+        this.exceptionHandler = new DefaultExceptionHandler();
+
         // Initialize Repository (DAO Pattern)
-        this.repository = new RepairRepository();
+        this.repository = new RepairRepository(databaseSubsystem, exceptionHandler);
 
         // Initialize Logger
-        this.logger = new RepairLogger(repository, "./logs");
+        this.logger = new RepairLogger(repository, "./logs", exceptionHandler);
 
         // Initialize External Adapters
         this.financialConnector = new FinancialSystemConnector(logger);
-        this.inventoryConnector = new InventoryConnector(logger);
+        this.inventoryConnector = new InventoryConnector(logger, databaseSubsystem, exceptionHandler);
 
         // Initialize Business Services
         this.validator = new RepairValidator(repository, logger);
-        this.statusTracker = new StatusTracker(repository);
+        this.statusTracker = new StatusTracker(repository, exceptionHandler);
         this.scheduler = new RepairScheduler(repository, logger);
         this.executor = new RepairExecutionService(statusTracker, logger, repository);
         this.costEstimator = new CostEstimationService(inventoryConnector, logger);
@@ -74,14 +82,14 @@ public class RepairsSubSystemApplication {
         IRepairExecutionView executionView = new ConsoleRepairExecutionView();
         IBillingView billingView = new ConsoleBillingView();
 
-        // Initialize Presenters (MVP Controllers)
-        this.repairRequestPresenter = new RepairRequestPresenter(
+        // Initialize MVC Controllers
+        this.repairRequestController = new RepairRequestController(
                 requestIntakeView, validator, scheduler, statusTracker, repository, logger);
 
-        this.executionPresenter = new RepairExecutionPresenter(
+        this.executionController = new RepairExecutionController(
                 executionView, executor, statusTracker, logger, repository);
 
-        this.billingPresenter = new BillingPresenter(
+        this.billingController = new BillingController(
                 billingView, billingService, costEstimator, financialConnector, logger, repository);
     }
 
@@ -121,7 +129,6 @@ public class RepairsSubSystemApplication {
             // Update status to validated
             request.updateStatus(RepairStatus.VALIDATED);
             repository.updateRepairRequest(request);
-            statusTracker.updateStatus(requestId, RepairStatus.VALIDATED);
             System.out.println("\n4. Status updated to: VALIDATED");
 
             // Schedule repair
@@ -131,13 +138,15 @@ public class RepairsSubSystemApplication {
 
             // Display repository statistics
             System.out.println("\n6. Repository Statistics:");
-            repository.getStatistics().forEach((key, value) ->
-                    System.out.println("   " + key + ": " + value)
-            );
+            if (repository instanceof RepairRepository concreteRepository) {
+                concreteRepository.getStatistics().forEach((key, value) ->
+                        System.out.println("   " + key + ": " + value)
+                );
+            }
 
         } catch (Exception e) {
             System.out.println("ERROR: " + e.getMessage());
-            e.printStackTrace();
+            exceptionHandler.handleException(e, "demonstrateRepairRequestFlow");
         }
     }
 
@@ -196,7 +205,7 @@ public class RepairsSubSystemApplication {
 
         } catch (Exception e) {
             System.out.println("ERROR: " + e.getMessage());
-            e.printStackTrace();
+            exceptionHandler.handleException(e, "demonstrateRepairExecutionFlow");
         }
     }
 
@@ -260,7 +269,7 @@ public class RepairsSubSystemApplication {
 
         } catch (Exception e) {
             System.out.println("ERROR: " + e.getMessage());
-            e.printStackTrace();
+            exceptionHandler.handleException(e, "demonstrateBillingFlow");
         }
     }
 
@@ -269,7 +278,7 @@ public class RepairsSubSystemApplication {
      */
     public void showSystemInfo() {
         System.out.println("\n========== REPAIRS SUB-SYSTEM INFORMATION ==========\n");
-        System.out.println("Architecture: MVP (Model-View-Presenter)");
+        System.out.println("Architecture: MVC (Model-View-Controller)");
         System.out.println("Design Patterns Used:");
         System.out.println("  - Singleton (Logger, Repository)");
         System.out.println("  - Factory (Entity creation)");
@@ -277,6 +286,7 @@ public class RepairsSubSystemApplication {
         System.out.println("  - Observer (Status tracking)");
         System.out.println("  - Strategy (Repair types)");
         System.out.println("  - DAO/Repository (Persistence)");
+        System.out.println("  - External DB Interface + Fallback Data Subsystem");
         System.out.println("  - Adapter (External systems)");
         System.out.println("  - Dependency Injection (Service assembly)");
         System.out.println("\nPrinciples Followed:");
@@ -296,6 +306,151 @@ public class RepairsSubSystemApplication {
     }
 
     /**
+     * Interactive console UI loop.
+     */
+    public void runInteractiveConsole() {
+        Scanner scanner = new Scanner(System.in);
+        boolean running = true;
+
+        while (running) {
+            System.out.println("\n========== REPAIRS SYSTEM MENU ==========");
+            System.out.println("1. Submit new repair request");
+            System.out.println("2. View pending requests");
+            System.out.println("3. View request status");
+            System.out.println("4. Start scheduled repair execution");
+            System.out.println("5. Update repair progress");
+            System.out.println("6. Complete repair");
+            System.out.println("7. Generate bill for completed repair");
+            System.out.println("8. Process payment for outstanding receipt");
+            System.out.println("9. Show outstanding bills");
+            System.out.println("10. Exit");
+            System.out.print("Select option: ");
+
+            String choice = scanner.nextLine().trim();
+
+            try {
+                switch (choice) {
+                    case "1":
+                        repairRequestController.showRepairForm();
+                        repairRequestController.onRepairRequestSubmitted();
+                        break;
+                    case "2":
+                        repairRequestController.displayPendingRequests();
+                        break;
+                    case "3":
+                        System.out.print("Enter Request ID: ");
+                        repairRequestController.displayRequestStatus(scanner.nextLine().trim());
+                        break;
+                    case "4": {
+                        String jobId = selectJobIdByStatus(scanner, RepairStatus.SCHEDULED);
+                        if (jobId == null) {
+                            break;
+                        }
+                        System.out.print("Enter Technician ID (default TECH-001): ");
+                        String technicianId = scanner.nextLine().trim();
+                        if (technicianId.isBlank()) {
+                            technicianId = "TECH-001";
+                        }
+                        executionController.assignTechnician(jobId, technicianId);
+                        executionController.onExecutionStarted(jobId);
+                        break;
+                    }
+                    case "5": {
+                        String jobId = selectJobIdByStatus(scanner, RepairStatus.IN_PROGRESS);
+                        if (jobId == null) {
+                            break;
+                        }
+                        System.out.print("Enter progress percentage (0-100): ");
+                        int progress = Integer.parseInt(scanner.nextLine().trim());
+                        executionController.onProgressUpdated(jobId, progress);
+                        break;
+                    }
+                    case "6": {
+                        String jobId = selectJobIdByStatus(scanner, RepairStatus.IN_PROGRESS);
+                        if (jobId == null) {
+                            break;
+                        }
+                        executionController.onExecutionCompleted(jobId);
+                        break;
+                    }
+                    case "7": {
+                        String jobId = selectJobIdByStatus(scanner, RepairStatus.COMPLETED);
+                        if (jobId == null) {
+                            break;
+                        }
+                        billingController.onBillingRequested(jobId);
+                        break;
+                    }
+                    case "8": {
+                        String receiptId = selectOutstandingReceiptId(scanner);
+                        if (receiptId == null) {
+                            break;
+                        }
+                        billingController.onPaymentProcessed(receiptId);
+                        break;
+                    }
+                    case "9":
+                        billingController.displayOutstandingBills();
+                        break;
+                    case "10":
+                        running = false;
+                        break;
+                    default:
+                        System.out.println("Invalid option. Please choose 1-10.");
+                }
+            } catch (Exception e) {
+                exceptionHandler.handleException(e, "runInteractiveConsole");
+                System.out.println("Operation failed: " + e.getMessage());
+            }
+        }
+
+        System.out.println("Exiting Repairs Sub-System.");
+    }
+
+    private String selectJobIdByStatus(Scanner scanner, RepairStatus status) {
+        List<RepairJob> jobs = repository.findRepairJobsByStatus(status);
+        if (jobs.isEmpty()) {
+            System.out.println("No jobs found with status: " + status);
+            return null;
+        }
+
+        System.out.println("Available jobs:");
+        for (int i = 0; i < jobs.size(); i++) {
+            System.out.println((i + 1) + ". " + jobs.get(i).getJobId());
+        }
+
+        System.out.print("Select job number: ");
+        int index = Integer.parseInt(scanner.nextLine().trim()) - 1;
+        if (index < 0 || index >= jobs.size()) {
+            System.out.println("Invalid selection.");
+            return null;
+        }
+        return jobs.get(index).getJobId();
+    }
+
+    private String selectOutstandingReceiptId(Scanner scanner) {
+        List<Receipt> receipts = billingService.getOutstandingBills();
+        if (receipts.isEmpty()) {
+            System.out.println("No outstanding receipts found.");
+            return null;
+        }
+
+        System.out.println("Outstanding receipts:");
+        for (int i = 0; i < receipts.size(); i++) {
+            Receipt receipt = receipts.get(i);
+            System.out.println((i + 1) + ". " + receipt.getReceiptId() + " (Amount: " + receipt.getFinalAmount() + ")");
+        }
+
+        System.out.print("Select receipt number: ");
+        int index = Integer.parseInt(scanner.nextLine().trim()) - 1;
+        if (index < 0 || index >= receipts.size()) {
+            System.out.println("Invalid selection.");
+            return null;
+        }
+        return receipts.get(index).getReceiptId();
+    }
+
+    /**
      * Main entry point
      */
     public static void main(String[] args) {
@@ -304,13 +459,14 @@ public class RepairsSubSystemApplication {
         // Show system information
         app.showSystemInfo();
 
-        // Run demonstrations
-        app.demonstrateRepairRequestFlow();
-        app.demonstrateRepairExecutionFlow();
-        app.demonstrateBillingFlow();
-
-        System.out.println("\n========== DEMONSTRATION COMPLETE ==========\n");
-        System.out.println("All components working correctly!");
-        System.out.println("The system is ready for integration with full UI implementation.");
+        // Run demo mode only when explicitly requested.
+        if (args.length > 0 && "demo".equalsIgnoreCase(args[0])) {
+            app.demonstrateRepairRequestFlow();
+            app.demonstrateRepairExecutionFlow();
+            app.demonstrateBillingFlow();
+            System.out.println("\n========== DEMONSTRATION COMPLETE ==========\n");
+        } else {
+            app.runInteractiveConsole();
+        }
     }
 }

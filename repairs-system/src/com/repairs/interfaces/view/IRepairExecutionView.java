@@ -35,6 +35,12 @@ public interface IRepairExecutionView {
     void displayWarning(String message);
 
     /**
+     * Display success message
+     * @param message The success message
+     */
+    void displaySuccess(String message);
+
+    /**
      * Show repair logs for current job
      * @param logs The log messages to display
      */

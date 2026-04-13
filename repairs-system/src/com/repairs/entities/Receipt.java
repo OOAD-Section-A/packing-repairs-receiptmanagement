@@ -90,7 +90,7 @@ public class Receipt {
      * Mark receipt as paid
      */
     public void markAsPaid(String paymentMethod) {
-        if (paymentStatus == PaymentStatus.PAID) {
+        if (paymentStatus == PaymentStatus.PROCESSED) {
             throw new IllegalStateException("Receipt is already paid");
         }
         this.paymentStatus = PaymentStatus.PROCESSED;
@@ -102,7 +102,7 @@ public class Receipt {
      * Mark payment as failed
      */
     public void markPaymentFailed() {
-        if (paymentStatus == PaymentStatus.PAID) {
+        if (paymentStatus == PaymentStatus.PROCESSED) {
             throw new IllegalStateException("Cannot fail payment on paid receipt");
         }
         this.paymentStatus = PaymentStatus.FAILED;

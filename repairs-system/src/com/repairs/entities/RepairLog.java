@@ -9,6 +9,7 @@ import java.util.Objects;
 public class RepairLog {
     private final String logId;
     private final RepairJob repairJob;
+    private final String referenceId;
     private final String logMessage;
     private final LocalDateTime timestamp;
     private final String severity;
@@ -22,6 +23,18 @@ public class RepairLog {
                      String severity, String operationType) {
         this.logId = Objects.requireNonNull(logId, "Log ID cannot be null");
         this.repairJob = Objects.requireNonNull(repairJob, "Repair job cannot be null");
+        this.referenceId = repairJob.getJobId();
+        this.logMessage = Objects.requireNonNull(logMessage, "Log message cannot be null");
+        this.timestamp = LocalDateTime.now();
+        this.severity = Objects.requireNonNull(severity, "Severity cannot be null");
+        this.operationType = Objects.requireNonNull(operationType, "Operation type cannot be null");
+    }
+
+    public RepairLog(String logId, String referenceId, String logMessage,
+                     String severity, String operationType) {
+        this.logId = Objects.requireNonNull(logId, "Log ID cannot be null");
+        this.repairJob = null;
+        this.referenceId = Objects.requireNonNull(referenceId, "Reference ID cannot be null");
         this.logMessage = Objects.requireNonNull(logMessage, "Log message cannot be null");
         this.timestamp = LocalDateTime.now();
         this.severity = Objects.requireNonNull(severity, "Severity cannot be null");
@@ -35,6 +48,10 @@ public class RepairLog {
 
     public RepairJob getRepairJob() {
         return repairJob;
+    }
+
+    public String getReferenceId() {
+        return referenceId;
     }
 
     public String getLogMessage() {
@@ -88,6 +105,7 @@ public class RepairLog {
     public String toString() {
         return "RepairLog{" +
                 "logId='" + logId + '\'' +
+                ", referenceId='" + referenceId + '\'' +
                 ", timestamp=" + timestamp +
                 ", severity='" + severity + '\'' +
                 ", operationType='" + operationType + '\'' +

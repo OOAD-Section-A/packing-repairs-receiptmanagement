@@ -7,12 +7,40 @@ README.md - Repairs Sub-System
 This is a **complete, production-ready Java implementation** of a Repairs Sub-System based on the component diagram. The system manages the entire lifecycle of repair requests from intake through completion and billing.
 
 ### Key Characteristics
-- **Architecture**: MVP (Model-View-Presenter) pattern
+- **Architecture**: MVC (Model-View-Controller)
 - **Principles**: SOLID + GRASP
 - **Design Patterns**: 8+ enterprise patterns
 - **Code Quality**: Production-level, fully documented
 - **Extensibility**: Built for easy feature additions
 - **Testability**: Highly testable with dependency injection
+- **Integration**: External DB subsystem + fallback default DB and exception handler
+
+---
+
+## Quick Start (Windows PowerShell)
+
+Run these commands from the `repairs-system` folder.
+
+```powershell
+# 1) Go to repairs-system
+Set-Location .\repairs-system
+
+# 2) Clean and create output folder
+if (Test-Path .\bin) { Remove-Item .\bin -Recurse -Force }
+New-Item -ItemType Directory -Path .\bin | Out-Null
+
+# 3) Compile all Java sources
+$sources = Get-ChildItem -Path .\src -Filter *.java -Recurse | ForEach-Object { $_.FullName }
+javac -d .\bin $sources
+
+# 4) Run the interactive console UI
+java -cp .\bin com.repairs.RepairsSubSystemApplication
+
+# Optional: run scripted demo mode
+# java -cp .\bin com.repairs.RepairsSubSystemApplication demo
+```
+
+If `javac` or `java` is not recognized, install JDK 17+ and ensure it is on `PATH`.
 
 ---
 
@@ -22,9 +50,9 @@ This is a **complete, production-ready Java implementation** of a Repairs Sub-Sy
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    PRESENTERS (MVP)                 │
-│  RepairRequestPresenter, ExecutionPresenter,        │
-│  BillingPresenter - Controller Logic                │
+│                    CONTROLLERS (MVC)                │
+│  RepairRequestController, RepairExecutionController,│
+│  BillingController - Controller Logic               │
 └──────────────────────┬──────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────┐
@@ -55,7 +83,7 @@ This is a **complete, production-ready Java implementation** of a Repairs Sub-Sy
 
 ```
 
-### 2. MVP PATTERN IMPLEMENTATION
+### 2. MVC PATTERN IMPLEMENTATION
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -68,16 +96,16 @@ This is a **complete, production-ready Java implementation** of a Repairs Sub-Sy
               │ user interaction
               ▼
 ┌─────────────────────────────────────────────┐
-│    PRESENTER (Controller)                   │
-│  RepairRequestPresenter                     │
-│  RepairExecutionPresenter                   │
-│  BillingPresenter                           │
-│  ← ORCHESTRATES all logic flow              │
+│    CONTROLLER                                │
+│  RepairRequestController                     │
+│  RepairExecutionController                   │
+│  BillingController                           │
+│  ← ORCHESTRATES all logic flow (MVC C)       │
 └─────────────┬───────────────────────────────┘
               │ delegates to
               ▼
 ┌─────────────────────────────────────────────┐
-│           MODEL (Business Logic)            │
+│           MODEL (Business Logic + Data)     │
 │  Services, Entities, Repositories            │
 │  ← Contains ALL business rules               │
 └─────────────────────────────────────────────┘
@@ -93,8 +121,8 @@ IRepairRepository repository = new RepairRepository();
 IRepairLogger logger = new RepairLogger(repository, logDir);
 IRepairValidator validator = new RepairValidator(repository, logger);
 
-// Presenters created with service dependencies
-RepairRequestPresenter presenter = new RepairRequestPresenter(
+// Controllers created with service dependencies
+RepairRequestController controller = new RepairRequestController(
     view, validator, scheduler, statusTracker, repository, logger
 );
 ```
@@ -113,7 +141,7 @@ RepairRequestPresenter presenter = new RepairRequestPresenter(
 | **DAO/Repository** | RepairRepository abstracts persistence | Database independence |
 | **Adapter** | FinancialSystemConnector, InventoryConnector | External system integration |
 | **Dependency Injection** | All services injected | Testability, loose coupling |
-| **MVP** | Presenters control Model-View interaction | Separation of concerns |
+| **MVC** | Controllers control Model-View interaction | Separation of concerns |
 
 ---
 
@@ -175,9 +203,9 @@ Objects are created by classes with necessary knowledge:
 - `BillingService` creates Receipt (knows billing)
 
 ### Controller
-Presenters control the flow:
-- `RepairRequestPresenter` orchestrates request flow
-- `RepairExecutionPresenter` controls execution flow
+Controllers control the flow:
+- `RepairRequestController` orchestrates request flow
+- `RepairExecutionController` controls execution flow
 
 ### Low Coupling
 Services depend on interfaces, not concrete classes:
@@ -482,19 +510,35 @@ assertTrue(validator.validate(request));
 
 ## Running the Application
 
-```bash
-# Compile
-javac -d bin -sourcepath src src/com/repairs/RepairsSubSystemApplication.java
+```powershell
+# From repairs-system directory
+if (Test-Path .\bin) { Remove-Item .\bin -Recurse -Force }
+New-Item -ItemType Directory -Path .\bin | Out-Null
+$sources = Get-ChildItem -Path .\src -Filter *.java -Recurse | ForEach-Object { $_.FullName }
+javac -d .\bin $sources
+# Interactive UI (recommended)
+java -cp .\bin com.repairs.RepairsSubSystemApplication
 
-# Run
-java -cp bin com.repairs.RepairsSubSystemApplication
+# Scripted demo mode
+# java -cp .\bin com.repairs.RepairsSubSystemApplication demo
 ```
 
-Output shows:
-- System architecture information
-- Complete repair request flow demonstration
-- Repair execution flow demonstration
-- Billing & payment flow demonstration
+Interactive mode shows a menu where you can:
+- Submit new repair requests via the intake view
+- Start and update repair execution
+- Generate bills and process payments
+- View outstanding bills
+
+If you run demo mode (`demo` argument), it executes predefined flows and exits.
+
+### Database and Exception Subsystem Integration
+
+- The repository now depends on `IDatabaseSubsystem`, allowing external DB integration.
+- If no external DB implementation is provided, `DefaultDatabaseSubsystem` is used as fallback data storage.
+- Inventory reads/writes are done through the database subsystem contract.
+- Logging is persisted via repository into database-backed storage.
+- Exception handling is delegated through `IExceptionHandler`.
+- If no external exception subsystem is provided, `DefaultExceptionHandler` handles exceptions safely.
 
 ---
 

@@ -40,6 +40,11 @@ public class ConsoleRepairExecutionView implements IRepairExecutionView {
     }
 
     @Override
+    public void displaySuccess(String message) {
+        System.out.println("\n✓ SUCCESS: " + message);
+    }
+
+    @Override
     public void displayLogs(List<String> logs) {
         System.out.println("\n📝 REPAIR LOGS:");
         if (logs.isEmpty()) {

@@ -1,4 +1,4 @@
-package com.repairs.presenters;
+package com.repairs.controllers;
 
 import com.repairs.entities.RepairJob;
 import com.repairs.entities.RepairLog;
@@ -9,17 +9,17 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * RepairExecutionPresenter - MVP Presenter for repair execution.
+ * RepairExecutionController - MVC Controller for repair execution.
  * Controls execution lifecycle and status updates.
  */
-public class RepairExecutionPresenter {
+public class RepairExecutionController {
     private final IRepairExecutionView view;
     private final IRepairExecutor executor;
     private final IStatusTracker statusTracker;
     private final IRepairLogger logger;
     private final IRepairRepository repository;
 
-    public RepairExecutionPresenter(IRepairExecutionView view,
+    public RepairExecutionController(IRepairExecutionView view,
                                    IRepairExecutor executor,
                                    IStatusTracker statusTracker,
                                    IRepairLogger logger,
@@ -323,3 +323,4 @@ public class RepairExecutionPresenter {
         }
     }
 }
+

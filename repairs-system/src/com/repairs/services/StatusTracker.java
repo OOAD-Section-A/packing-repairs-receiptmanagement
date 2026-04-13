@@ -1,6 +1,8 @@
 package com.repairs.services;
 
 import com.repairs.enums.RepairStatus;
+import com.repairs.external.DefaultExceptionHandler;
+import com.repairs.interfaces.model.IExceptionHandler;
 import com.repairs.interfaces.model.IRepairRepository;
 import com.repairs.interfaces.model.IStatusObserver;
 import com.repairs.interfaces.model.IStatusTracker;
@@ -14,12 +16,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class StatusTracker implements IStatusTracker {
     private final IRepairRepository repository;
+    private final IExceptionHandler exceptionHandler;
     private final List<IStatusObserver> observers;
     private final Map<String, RepairStatus> statusCache; // Cache for performance
     private final Map<String, LocalDateTime> lastUpdateCache; // Track last update times
 
     public StatusTracker(IRepairRepository repository) {
+        this(repository, new DefaultExceptionHandler());
+    }
+
+    public StatusTracker(IRepairRepository repository, IExceptionHandler exceptionHandler) {
         this.repository = Objects.requireNonNull(repository, "Repository cannot be null");
+        this.exceptionHandler = exceptionHandler != null ? exceptionHandler : new DefaultExceptionHandler();
         this.observers = Collections.synchronizedList(new ArrayList<>());
         this.statusCache = new ConcurrentHashMap<>();
         this.lastUpdateCache = new ConcurrentHashMap<>();
@@ -121,7 +129,7 @@ public class StatusTracker implements IStatusTracker {
                 observer.onStatusChanged(jobId, oldStatus, newStatus);
             } catch (Exception e) {
                 // Log observer notification errors but don't fail the status update
-                System.err.println("Error notifying observer " + observer.getObserverId() + ": " + e.getMessage());
+                exceptionHandler.handleException(e, "StatusTracker.notifyStatusChange(" + observer.getObserverId() + ")");
             }
         }
     }

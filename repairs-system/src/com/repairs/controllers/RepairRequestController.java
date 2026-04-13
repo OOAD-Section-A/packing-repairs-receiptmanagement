@@ -1,4 +1,4 @@
-package com.repairs.presenters;
+package com.repairs.controllers;
 
 import com.repairs.entities.RepairRequest;
 import com.repairs.enums.RepairStatus;
@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * RepairRequestPresenter - MVP Presenter for repair request intake.
+ * RepairRequestController - MVC Controller for repair request intake.
  * Controls all logic flow between View and Model.
  * View is completely passive - no business logic.
  */
-public class RepairRequestPresenter {
+public class RepairRequestController {
     private final IRepairRequestIntakeView view;
     private final IRepairValidator validator;
     private final IRepairScheduler scheduler;
@@ -21,7 +21,7 @@ public class RepairRequestPresenter {
     private final IRepairRepository repository;
     private final IRepairLogger logger;
 
-    public RepairRequestPresenter(IRepairRequestIntakeView view,
+    public RepairRequestController(IRepairRequestIntakeView view,
                                  IRepairValidator validator,
                                  IRepairScheduler scheduler,
                                  IStatusTracker statusTracker,
@@ -37,7 +37,7 @@ public class RepairRequestPresenter {
 
     /**
      * Handle repair request submission from view
-     * Flow: Get Input → Validate → Save → Schedule → Update Status
+        * Flow: Get Input -> Validate -> Save -> Schedule -> Update Status
      */
     public void onRepairRequestSubmitted() {
         try {
@@ -248,3 +248,4 @@ public class RepairRequestPresenter {
         }
     }
 }
+

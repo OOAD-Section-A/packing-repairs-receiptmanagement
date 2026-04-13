@@ -72,6 +72,12 @@ public interface IBillingView {
     void displayError(String message);
 
     /**
+     * Show warning message
+     * @param message The warning message
+     */
+    void displayWarning(String message);
+
+    /**
      * Show success message
      * @param message The success message
      */

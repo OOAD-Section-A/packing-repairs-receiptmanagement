@@ -1,6 +1,8 @@
 package com.repairs.services;
 
 import com.repairs.entities.RepairLog;
+import com.repairs.external.DefaultExceptionHandler;
+import com.repairs.interfaces.model.IExceptionHandler;
 import com.repairs.interfaces.model.IRepairLogger;
 import com.repairs.interfaces.model.IRepairRepository;
 import java.io.*;
@@ -15,12 +17,18 @@ import java.util.stream.Collectors;
  */
 public class RepairLogger implements IRepairLogger {
     private final IRepairRepository repository;
+    private final IExceptionHandler exceptionHandler;
     private final String logDirectory;
     private final List<RepairLog> inMemoryLogs;
     private final DateTimeFormatter dateFormatter;
 
     public RepairLogger(IRepairRepository repository, String logDirectory) {
+        this(repository, logDirectory, new DefaultExceptionHandler());
+    }
+
+    public RepairLogger(IRepairRepository repository, String logDirectory, IExceptionHandler exceptionHandler) {
         this.repository = Objects.requireNonNull(repository, "Repository cannot be null");
+        this.exceptionHandler = exceptionHandler != null ? exceptionHandler : new DefaultExceptionHandler();
         this.logDirectory = logDirectory != null ? logDirectory : "./logs";
         this.inMemoryLogs = Collections.synchronizedList(new ArrayList<>());
         this.dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -36,26 +44,27 @@ public class RepairLogger implements IRepairLogger {
         }
 
         try {
-            // We need a RepairJob instance to create a RepairLog
-            // For now, we'll create a minimal in-memory log entry
             String logId = generateLogId(jobId);
+            String logEntry = String.format("[%s] %s - %s (%s): %s",
+                    LocalDateTime.now().format(dateFormatter),
+                    severity,
+                    operationType,
+                    jobId,
+                    message);
+
+            // Persist into repository/database first.
+            repository.saveRepairLog(new RepairLog(logId, jobId, logEntry, severity, operationType));
 
             // Write to file
             writeToFile(jobId, logId, message, severity, operationType);
 
             // Store in memory (limited size)
             if (inMemoryLogs.size() < 10000) {
-                String logEntry = String.format("[%s] %s - %s (%s): %s",
-                        LocalDateTime.now().format(dateFormatter),
-                        severity,
-                        operationType,
-                        jobId,
-                        message);
-                inMemoryLogs.add(new RepairLog(logId, null, logEntry, severity, operationType));
+                inMemoryLogs.add(new RepairLog(logId, jobId, logEntry, severity, operationType));
             }
 
         } catch (Exception e) {
-            System.err.println("Error logging: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.log");
         }
     }
 
@@ -68,7 +77,7 @@ public class RepairLogger implements IRepairLogger {
         try {
             return repository.findLogsByJobId(jobId);
         } catch (Exception e) {
-            System.err.println("Error retrieving job logs: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.getJobLogs");
             return Collections.emptyList();
         }
     }
@@ -84,7 +93,7 @@ public class RepairLogger implements IRepairLogger {
                     .filter(RepairLog::isErrorLog)
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            System.err.println("Error retrieving error logs: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.getErrorLogs");
             return Collections.emptyList();
         }
     }
@@ -106,7 +115,7 @@ public class RepairLogger implements IRepairLogger {
             return allLogs.size();
 
         } catch (Exception e) {
-            System.err.println("Error clearing old logs: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.clearOldLogs");
             return 0;
         }
     }
@@ -124,7 +133,7 @@ public class RepairLogger implements IRepairLogger {
                                    !log.getTimestamp().isAfter(endDate))
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            System.err.println("Error retrieving logs between dates: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.getLogsBetweenDates");
             return Collections.emptyList();
         }
     }
@@ -152,7 +161,7 @@ public class RepairLogger implements IRepairLogger {
             }
 
         } catch (Exception e) {
-            System.err.println("Error exporting logs: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.exportLogsToFile");
             return false;
         }
     }
@@ -181,7 +190,7 @@ public class RepairLogger implements IRepairLogger {
             }
 
         } catch (IOException e) {
-            System.err.println("Error writing to log file: " + e.getMessage());
+            exceptionHandler.handleException(e, "RepairLogger.writeToFile");
         }
     }
 

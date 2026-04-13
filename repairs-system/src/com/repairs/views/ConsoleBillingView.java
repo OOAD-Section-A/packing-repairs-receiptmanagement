@@ -112,6 +112,11 @@ public class ConsoleBillingView implements IBillingView {
     }
 
     @Override
+    public void displayWarning(String message) {
+        System.out.println("\n⚠️  WARNING: " + message);
+    }
+
+    @Override
     public void displaySuccess(String message) {
         System.out.println("\n✓ SUCCESS: " + message);
     }
