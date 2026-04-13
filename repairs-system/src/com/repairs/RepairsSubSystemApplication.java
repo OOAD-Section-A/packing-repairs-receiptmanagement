@@ -126,10 +126,10 @@ public class RepairsSubSystemApplication {
             repository.saveRepairRequest(request);
             System.out.println("\n3. Request saved to repository");
 
-            // Update status to validated
+            // Update request status to validated
             request.updateStatus(RepairStatus.VALIDATED);
             repository.updateRepairRequest(request);
-            System.out.println("\n4. Status updated to: VALIDATED");
+            System.out.println("\n4. Request status updated to: VALIDATED");
 
             // Schedule repair
             LocalDateTime scheduledDate = scheduler.scheduleRepair(request);
