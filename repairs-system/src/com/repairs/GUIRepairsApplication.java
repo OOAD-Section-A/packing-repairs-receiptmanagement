@@ -384,17 +384,24 @@ public class GUIRepairsApplication extends JFrame {
     }
 
     private void createMainPanel() {
-        JPanel panel = new JPanel(new BorderLayout(16, 16));
-        panel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
-        panel.setBackground(new Color(236, 240, 241));
+        Color bgPrimary = new Color(25, 28, 36);
+        Color bgCard = new Color(35, 39, 50);
+        Color textPrimary = new Color(230, 233, 240);
+        Color textSecondary = new Color(150, 158, 175);
+        Color borderSubtle = new Color(55, 60, 75);
 
-        JPanel headerPanel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout(16, 16));
+        panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 18, 24));
+        panel.setBackground(bgPrimary);
+
+        JPanel headerPanel = new JPanel(new BorderLayout(0, 6));
         headerPanel.setOpaque(false);
         JLabel titleLabel = new JLabel("Repairs Management Dashboard");
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        titleLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 26));
+        titleLabel.setForeground(textPrimary);
         JLabel descLabel = new JLabel("Pick a module to start work. You can always return here using Back to Dashboard.");
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        descLabel.setForeground(new Color(90, 90, 90));
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        descLabel.setForeground(textSecondary);
         headerPanel.add(titleLabel, BorderLayout.NORTH);
         headerPanel.add(descLabel, BorderLayout.SOUTH);
         panel.add(headerPanel, BorderLayout.NORTH);
@@ -406,27 +413,31 @@ public class GUIRepairsApplication extends JFrame {
                 "Create and validate new repair requests.",
                 "Open Intake",
                 this::openRequestView,
-                new Color(52, 152, 219)));
+                new Color(88, 136, 255)));
 
         cardsPanel.add(createModuleCard(
                 "Execution",
                 "Track job progress and mark completion/failure.",
                 "Open Execution",
                 this::openExecutionView,
-                new Color(46, 204, 113)));
+                new Color(72, 199, 142)));
 
         cardsPanel.add(createModuleCard(
                 "Billing",
                 "Handle estimates, payments, and bill tracking.",
                 "Open Billing",
                 this::openBillingView,
-                new Color(230, 126, 34)));
+                new Color(255, 171, 64)));
         panel.add(cardsPanel, BorderLayout.CENTER);
 
-        statusBarLabel = new JLabel("Ready.");
-        statusBarLabel.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        statusBarLabel = new JLabel("  Ready.");
+        statusBarLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusBarLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, borderSubtle),
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
         statusBarLabel.setOpaque(true);
-        statusBarLabel.setBackground(Color.WHITE);
+        statusBarLabel.setBackground(bgCard);
+        statusBarLabel.setForeground(textSecondary);
         panel.add(statusBarLabel, BorderLayout.SOUTH);
 
         setContentPane(panel);
@@ -437,16 +448,28 @@ public class GUIRepairsApplication extends JFrame {
                                     String buttonText,
                                     Runnable action,
                                     Color accentColor) {
-        JPanel card = new JPanel(new BorderLayout(8, 8));
+        Color bgCard = new Color(35, 39, 50);
+        Color borderSubtle = new Color(55, 60, 75);
+        Color textSecondary = new Color(150, 158, 175);
+
+        JPanel card = new JPanel(new BorderLayout(10, 10));
         card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(210, 210, 210)),
-                BorderFactory.createEmptyBorder(16, 16, 16, 16)));
-        card.setBackground(Color.WHITE);
+                BorderFactory.createLineBorder(borderSubtle),
+                BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+        card.setBackground(bgCard);
+
+        // Accent stripe at top
+        JPanel stripe = new JPanel();
+        stripe.setPreferredSize(new Dimension(0, 3));
+        stripe.setBackground(accentColor);
+
+        JPanel inner = new JPanel(new BorderLayout(8, 8));
+        inner.setOpaque(false);
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 17));
         titleLabel.setForeground(accentColor);
-        card.add(titleLabel, BorderLayout.NORTH);
+        inner.add(titleLabel, BorderLayout.NORTH);
 
         JTextArea descriptionArea = new JTextArea(description);
         descriptionArea.setLineWrap(true);
@@ -455,15 +478,21 @@ public class GUIRepairsApplication extends JFrame {
         descriptionArea.setOpaque(false);
         descriptionArea.setFocusable(false);
         descriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        descriptionArea.setForeground(new Color(70, 70, 70));
-        card.add(descriptionArea, BorderLayout.CENTER);
+        descriptionArea.setForeground(textSecondary);
+        inner.add(descriptionArea, BorderLayout.CENTER);
 
         JButton openButton = new JButton(buttonText);
         openButton.setBackground(accentColor);
         openButton.setForeground(Color.WHITE);
         openButton.setFocusPainted(false);
+        openButton.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        openButton.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        openButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         openButton.addActionListener(e -> action.run());
-        card.add(openButton, BorderLayout.SOUTH);
+        inner.add(openButton, BorderLayout.SOUTH);
+
+        card.add(stripe, BorderLayout.NORTH);
+        card.add(inner, BorderLayout.CENTER);
 
         return card;
     }

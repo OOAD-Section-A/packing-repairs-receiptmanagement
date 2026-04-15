@@ -3,6 +3,7 @@ package com.repairs.views;
 import com.repairs.enums.RepairStatus;
 import com.repairs.interfaces.view.IRepairExecutionView;
 import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
 import java.util.List;
 
@@ -31,10 +32,22 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
     private JButton completeButton;
     private JButton failButton;
 
+    // Modern color palette
+    private static final Color BG_PRIMARY = new Color(25, 28, 36);
+    private static final Color BG_CARD = new Color(35, 39, 50);
+    private static final Color BG_INPUT = new Color(44, 49, 63);
+    private static final Color ACCENT_BLUE = new Color(88, 136, 255);
+    private static final Color ACCENT_GREEN = new Color(72, 199, 142);
+    private static final Color ACCENT_ORANGE = new Color(255, 171, 64);
+    private static final Color ACCENT_RED = new Color(255, 89, 94);
+    private static final Color TEXT_PRIMARY = new Color(230, 233, 240);
+    private static final Color TEXT_SECONDARY = new Color(150, 158, 175);
+    private static final Color BORDER_SUBTLE = new Color(55, 60, 75);
+
     public GUIRepairExecutionView() {
         setTitle("Repair Execution Monitor");
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        setSize(700, 600);
+        setSize(780, 680);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -44,192 +57,264 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
 
     private void initializeComponents() {
         JPanel mainPanel = new JPanel();
-        mainPanel.setLayout(new GridBagLayout());
-        mainPanel.setBackground(new Color(240, 240, 240));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainPanel.setLayout(new BorderLayout(0, 0));
+        mainPanel.setBackground(BG_PRIMARY);
 
-        JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
-        headerPanel.setBackground(new Color(240, 240, 240));
-        backButton = new JButton("Back to Dashboard");
-        backButton.setFocusable(false);
-        JLabel helperLabel = new JLabel("Enter or paste a job ID, then use actions below.");
-        helperLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        helperLabel.setForeground(new Color(80, 80, 80));
-        headerPanel.add(backButton, BorderLayout.WEST);
-        headerPanel.add(helperLabel, BorderLayout.CENTER);
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 4;
-        mainPanel.add(headerPanel, gbc);
+        // --- Top Bar ---
+        JPanel topBar = new JPanel(new BorderLayout(12, 0));
+        topBar.setBackground(BG_CARD);
+        topBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_SUBTLE),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
+        backButton = createStyledButton("← Dashboard", TEXT_SECONDARY, BG_INPUT);
+        backButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        topBar.add(backButton, BorderLayout.WEST);
 
-        // Title
         JLabel titleLabel = new JLabel("Repair Execution Monitor");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 4;
-        mainPanel.add(titleLabel, gbc);
+        titleLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 17));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        topBar.add(titleLabel, BorderLayout.CENTER);
 
-        JPanel selectionPanel = new JPanel(new GridBagLayout());
-        selectionPanel.setBackground(new Color(240, 240, 240));
-        GridBagConstraints sgbc = new GridBagConstraints();
-        sgbc.insets = new Insets(4, 4, 4, 4);
-        sgbc.fill = GridBagConstraints.HORIZONTAL;
+        JLabel helperLabel = new JLabel("Select or enter a Job ID to get started  ");
+        helperLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        helperLabel.setForeground(TEXT_SECONDARY);
+        topBar.add(helperLabel, BorderLayout.EAST);
+        mainPanel.add(topBar, BorderLayout.NORTH);
 
-        sgbc.gridx = 0;
-        sgbc.gridy = 0;
-        selectionPanel.add(new JLabel("Available Jobs:"), sgbc);
+        // --- Center Content ---
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setBackground(BG_PRIMARY);
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(12, 16, 8, 16));
 
-        sgbc.gridx = 1;
-        sgbc.weightx = 1.0;
+        // Job Selection Card
+        JPanel selectionCard = createCard("Job Selection");
+        selectionCard.setLayout(new GridBagLayout());
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(4, 6, 4, 6);
+        g.fill = GridBagConstraints.HORIZONTAL;
+
+        g.gridx = 0; g.gridy = 0;
+        selectionCard.add(styledLabel("Available Jobs"), g);
+        g.gridx = 1; g.weightx = 1.0;
         jobSelector = new JComboBox<>();
-        jobSelector.setPrototypeDisplayValue("JOB-0000");
-        selectionPanel.add(jobSelector, sgbc);
+        styleComboBox(jobSelector);
+        selectionCard.add(jobSelector, g);
+        g.gridx = 2; g.weightx = 0;
+        refreshJobsButton = createStyledButton("Refresh", TEXT_PRIMARY, ACCENT_BLUE.darker());
+        selectionCard.add(refreshJobsButton, g);
+        g.gridx = 3;
+        checkStatusButton = createStyledButton("Check Status", TEXT_PRIMARY, BG_INPUT);
+        selectionCard.add(checkStatusButton, g);
 
-        sgbc.gridx = 2;
-        sgbc.weightx = 0;
-        refreshJobsButton = new JButton("Refresh");
-        selectionPanel.add(refreshJobsButton, sgbc);
-
-        sgbc.gridx = 3;
-        checkStatusButton = new JButton("Check Status");
-        selectionPanel.add(checkStatusButton, sgbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 4;
-        mainPanel.add(selectionPanel, gbc);
-
-        // Job ID input
-        gbc.gridwidth = 1;
-        gbc.gridy = 3;
-        gbc.gridx = 0;
-        mainPanel.add(new JLabel("Job ID Input:"), gbc);
-        gbc.gridx = 1;
-        jobIdField = new JTextField(16);
+        g.gridx = 0; g.gridy = 1; g.weightx = 0;
+        selectionCard.add(styledLabel("Job ID Input"), g);
+        g.gridx = 1; g.weightx = 1.0;
+        jobIdField = styledTextField(16);
         jobIdField.setToolTipText("Enter job id, for example JOB-1234.");
-        mainPanel.add(jobIdField, gbc);
-
-        gbc.gridx = 2;
-        mainPanel.add(new JLabel("Selected Job:"), gbc);
-        gbc.gridx = 3;
+        selectionCard.add(jobIdField, g);
+        g.gridx = 2;
+        selectionCard.add(styledLabel("Active Job"), g);
+        g.gridx = 3;
         jobIdLabel = new JLabel("-");
-        mainPanel.add(jobIdLabel, gbc);
+        jobIdLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        jobIdLabel.setForeground(ACCENT_BLUE);
+        selectionCard.add(jobIdLabel, g);
 
-        // Status
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        mainPanel.add(new JLabel("Status:"), gbc);
-        gbc.gridx = 1;
+        centerPanel.add(selectionCard);
+        centerPanel.add(Box.createVerticalStrut(8));
+
+        // Info & Controls Card
+        JPanel infoCard = createCard("Status & Controls");
+        infoCard.setLayout(new GridBagLayout());
+        g = new GridBagConstraints();
+        g.insets = new Insets(5, 6, 5, 6);
+        g.fill = GridBagConstraints.HORIZONTAL;
+
+        g.gridx = 0; g.gridy = 0;
+        infoCard.add(styledLabel("Status"), g);
+        g.gridx = 1;
         statusLabel = new JLabel("PENDING");
-        statusLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        statusLabel.setForeground(new Color(52, 152, 219));
-        mainPanel.add(statusLabel, gbc);
+        statusLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        statusLabel.setForeground(ACCENT_BLUE);
+        infoCard.add(statusLabel, g);
 
-        gbc.gridx = 2;
-        mainPanel.add(new JLabel("Technician ID:"), gbc);
-        gbc.gridx = 3;
+        g.gridx = 2;
+        infoCard.add(styledLabel("Technician"), g);
+        g.gridx = 3;
+        technicianLabel = new JLabel("Not assigned");
+        technicianLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        technicianLabel.setForeground(TEXT_SECONDARY);
+        infoCard.add(technicianLabel, g);
+
+        g.gridx = 0; g.gridy = 1;
+        infoCard.add(styledLabel("Assign Tech"), g);
+        g.gridx = 1;
         technicianIdField = new JTextField("TECH-001", 12);
+        styleTextField(technicianIdField);
         technicianIdField.setToolTipText("Assign a technician before starting execution.");
-        mainPanel.add(technicianIdField, gbc);
+        infoCard.add(technicianIdField, g);
+        g.gridx = 2;
+        assignTechnicianButton = createStyledButton("Assign", TEXT_PRIMARY, ACCENT_BLUE);
+        infoCard.add(assignTechnicianButton, g);
+        g.gridx = 3;
+        infoCard.add(styledLabel("Time Left"), g);
 
-        gbc.gridx = 2;
-        gbc.gridy = 5;
-        assignTechnicianButton = new JButton("Assign Technician");
-        mainPanel.add(assignTechnicianButton, gbc);
-
-        gbc.gridx = 3;
-        SpinnerNumberModel progressModel = new SpinnerNumberModel(0, 0, 100, 5);
-        progressSpinner = new JSpinner(progressModel);
-        progressSpinner.setToolTipText("Set progress percentage and click Update Progress.");
-        mainPanel.add(progressSpinner, gbc);
-
-        // Progress Bar
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        gbc.gridwidth = 4;
-        mainPanel.add(new JLabel("Progress:"), gbc);
-        gbc.gridy = 6;
+        g.gridx = 0; g.gridy = 2;
+        infoCard.add(styledLabel("Progress"), g);
+        g.gridx = 1; g.gridwidth = 2;
         progressBar = new JProgressBar(0, 100);
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
-        mainPanel.add(progressBar, gbc);
-
-        gbc.gridx = 3;
-        gbc.gridy = 7;
-        gbc.gridwidth = 1;
-        updateProgressButton = new JButton("Update Progress");
-        mainPanel.add(updateProgressButton, gbc);
-        gbc.gridwidth = 4;
-
-        // Technician
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.gridwidth = 1;
-        mainPanel.add(new JLabel("Technician:"), gbc);
-        gbc.gridx = 1;
-        technicianLabel = new JLabel("Not assigned");
-        mainPanel.add(technicianLabel, gbc);
-
-        // Time Remaining
-        gbc.gridx = 2;
-        mainPanel.add(new JLabel("Time Remaining:"), gbc);
-        gbc.gridx = 3;
+        progressBar.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        progressBar.setForeground(ACCENT_BLUE);
+        progressBar.setBackground(BG_INPUT);
+        progressBar.setBorder(BorderFactory.createEmptyBorder());
+        progressBar.setPreferredSize(new Dimension(200, 22));
+        infoCard.add(progressBar, g);
+        g.gridwidth = 1;
+        g.gridx = 3;
         timeRemainingLabel = new JLabel("-");
-        mainPanel.add(timeRemainingLabel, gbc);
+        timeRemainingLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        timeRemainingLabel.setForeground(ACCENT_ORANGE);
+        infoCard.add(timeRemainingLabel, g);
 
-        // Logs Area
-        gbc.gridx = 0;
-        gbc.gridy = 8;
-        gbc.gridwidth = 4;
-        mainPanel.add(new JLabel("Repair Logs:"), gbc);
-        gbc.gridy = 9;
-        gbc.gridheight = 2;
-        logsArea = new JTextArea(8, 50);
+        g.gridx = 0; g.gridy = 3;
+        SpinnerNumberModel progressModel = new SpinnerNumberModel(0, 0, 100, 5);
+        progressSpinner = new JSpinner(progressModel);
+        styleSpinner(progressSpinner);
+        progressSpinner.setToolTipText("Set progress percentage and click Update Progress.");
+        infoCard.add(styledLabel("Set %"), g);
+        g.gridx = 1;
+        infoCard.add(progressSpinner, g);
+        g.gridx = 2;
+        updateProgressButton = createStyledButton("Update", TEXT_PRIMARY, BG_INPUT);
+        infoCard.add(updateProgressButton, g);
+
+        centerPanel.add(infoCard);
+        centerPanel.add(Box.createVerticalStrut(8));
+
+        // Logs Card
+        JPanel logsCard = createCard("Repair Logs");
+        logsCard.setLayout(new BorderLayout(6, 6));
+        logsArea = new JTextArea(7, 50);
         logsArea.setEditable(false);
-        logsArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        logsArea.setFont(new Font("Consolas", Font.PLAIN, 11));
+        logsArea.setBackground(BG_INPUT);
+        logsArea.setForeground(TEXT_PRIMARY);
+        logsArea.setCaretColor(TEXT_PRIMARY);
+        logsArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         JScrollPane scrollPane = new JScrollPane(logsArea);
-        mainPanel.add(scrollPane, gbc);
+        scrollPane.setBorder(BorderFactory.createLineBorder(BORDER_SUBTLE));
+        scrollPane.getVerticalScrollBar().setUnitIncrement(12);
+        logsCard.add(scrollPane, BorderLayout.CENTER);
+        centerPanel.add(logsCard);
 
-        // Buttons Panel
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(new Color(240, 240, 240));
-        buttonPanel.setLayout(new GridLayout(1, 4, 10, 10));
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-        startButton = new JButton("Start");
-        startButton.setBackground(new Color(39, 174, 96));
-        startButton.setForeground(Color.WHITE);
-        buttonPanel.add(startButton);
+        // --- Bottom Action Bar ---
+        JPanel actionBar = new JPanel(new GridLayout(1, 4, 10, 0));
+        actionBar.setBackground(BG_CARD);
+        actionBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_SUBTLE),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
 
-        pauseButton = new JButton("Pause");
-        pauseButton.setBackground(new Color(230, 126, 34));
-        pauseButton.setForeground(Color.WHITE);
+        startButton = createActionButton("▶ Start", ACCENT_GREEN);
+        pauseButton = createActionButton("⏸ Pause", ACCENT_ORANGE);
         pauseButton.setEnabled(false);
-        buttonPanel.add(pauseButton);
-
-        completeButton = new JButton("Complete");
-        completeButton.setBackground(new Color(52, 152, 219));
-        completeButton.setForeground(Color.WHITE);
+        completeButton = createActionButton("✓ Complete", ACCENT_BLUE);
         completeButton.setEnabled(false);
-        buttonPanel.add(completeButton);
-
-        failButton = new JButton("Fail");
-        failButton.setBackground(new Color(231, 76, 60));
-        failButton.setForeground(Color.WHITE);
+        failButton = createActionButton("✕ Fail", ACCENT_RED);
         failButton.setEnabled(false);
-        buttonPanel.add(failButton);
 
-        gbc.gridx = 0;
-        gbc.gridy = 11;
-        gbc.gridwidth = 4;
-        gbc.gridheight = 1;
-        mainPanel.add(buttonPanel, gbc);
+        actionBar.add(startButton);
+        actionBar.add(pauseButton);
+        actionBar.add(completeButton);
+        actionBar.add(failButton);
+        mainPanel.add(actionBar, BorderLayout.SOUTH);
 
-        JScrollPane mainScrollPane = new JScrollPane(mainPanel);
-        add(mainScrollPane);
+        setContentPane(mainPanel);
     }
+
+    // =============== Styling Helpers ===============
+
+    private JPanel createCard(String title) {
+        JPanel card = new JPanel();
+        card.setBackground(BG_CARD);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
+        TitledBorder tb = BorderFactory.createTitledBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true), title);
+        tb.setTitleColor(TEXT_SECONDARY);
+        tb.setTitleFont(new Font("Segoe UI", Font.PLAIN, 11));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                tb, BorderFactory.createEmptyBorder(6, 10, 8, 10)));
+        return card;
+    }
+
+    private JLabel styledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        label.setForeground(TEXT_SECONDARY);
+        return label;
+    }
+
+    private JTextField styledTextField(int columns) {
+        JTextField field = new JTextField(columns);
+        styleTextField(field);
+        return field;
+    }
+
+    private void styleTextField(JTextField field) {
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        field.setBackground(BG_INPUT);
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+    }
+
+    private void styleComboBox(JComboBox<String> combo) {
+        combo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        combo.setBackground(BG_INPUT);
+        combo.setForeground(TEXT_PRIMARY);
+        combo.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+    }
+
+    private void styleSpinner(JSpinner spinner) {
+        spinner.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        spinner.getEditor().getComponent(0).setBackground(BG_INPUT);
+        spinner.getEditor().getComponent(0).setForeground(TEXT_PRIMARY);
+    }
+
+    private JButton createStyledButton(String text, Color fg, Color bg) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        button.setForeground(fg);
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JButton createActionButton(String text, Color bg) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        button.setForeground(Color.WHITE);
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    // =============== IRepairExecutionView Implementation ===============
 
     @Override
     public void displayJobProgress(String jobId, int progress) {
@@ -242,10 +327,11 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
     public void showExecutionStatus(RepairStatus status) {
         statusLabel.setText(status.toString());
         Color statusColor = switch (status) {
-            case IN_PROGRESS -> new Color(52, 152, 219);
-            case COMPLETED -> new Color(39, 174, 96);
-            case FAILED -> new Color(231, 76, 60);
-            default -> Color.BLACK;
+            case IN_PROGRESS -> ACCENT_BLUE;
+            case COMPLETED -> ACCENT_GREEN;
+            case FAILED -> ACCENT_RED;
+            case SCHEDULED -> ACCENT_ORANGE;
+            default -> TEXT_SECONDARY;
         };
         statusLabel.setForeground(statusColor);
     }
@@ -253,17 +339,17 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
     @Override
     public void displayError(String message) {
         JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
-        logsArea.append("❌ ERROR: " + message + "\n");
+        logsArea.append("  ERROR: " + message + "\n");
     }
 
     @Override
     public void displayWarning(String message) {
-        logsArea.append("⚠️  WARNING: " + message + "\n");
+        logsArea.append("  WARNING: " + message + "\n");
     }
 
     @Override
     public void displaySuccess(String message) {
-        logsArea.append("✓ SUCCESS: " + message + "\n");
+        logsArea.append("  SUCCESS: " + message + "\n");
     }
 
     @Override
@@ -276,13 +362,14 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
 
     @Override
     public void addLogMessage(String logMessage) {
-        logsArea.append("📌 " + logMessage + "\n");
+        logsArea.append("  " + logMessage + "\n");
         logsArea.setCaretPosition(logsArea.getDocument().getLength());
     }
 
     @Override
     public void displayTechnician(String technicianId, String technicianName) {
         technicianLabel.setText(technicianName);
+        technicianLabel.setForeground(ACCENT_GREEN);
     }
 
     @Override
@@ -319,9 +406,11 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
         progressSpinner.setValue(0);
         jobIdLabel.setText("-");
         statusLabel.setText("PENDING");
+        statusLabel.setForeground(ACCENT_BLUE);
         progressBar.setValue(0);
         logsArea.setText("");
         technicianLabel.setText("Not assigned");
+        technicianLabel.setForeground(TEXT_SECONDARY);
         timeRemainingLabel.setText("-");
     }
 
@@ -340,6 +429,8 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
         repaint();
         revalidate();
     }
+
+    // =============== Accessors ===============
 
     public JButton getStartButton() {
         return startButton;

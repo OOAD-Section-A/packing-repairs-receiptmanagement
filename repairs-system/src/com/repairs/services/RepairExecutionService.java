@@ -50,6 +50,13 @@ public class RepairExecutionService implements IRepairExecutor {
             // Start the repair
             job.startRepair();
 
+            // Transition the parent request status to IN_PROGRESS as well
+            var request = job.getRepairRequest();
+            if (request.getStatus() == RepairStatus.SCHEDULED) {
+                request.updateStatus(RepairStatus.IN_PROGRESS);
+                repository.updateRepairRequest(request);
+            }
+
             // Update status in tracker
             statusTracker.updateStatus(job.getJobId(), RepairStatus.IN_PROGRESS);
 
@@ -213,6 +220,13 @@ public class RepairExecutionService implements IRepairExecutor {
         try {
             // Fail the job
             job.failRepair(reason);
+
+            // Update the parent request status to FAILED
+            var request = job.getRepairRequest();
+            if (request.getStatus() == RepairStatus.IN_PROGRESS) {
+                request.updateStatus(RepairStatus.FAILED);
+                repository.updateRepairRequest(request);
+            }
 
             // Update status in tracker
             statusTracker.updateStatus(jobId, RepairStatus.FAILED);

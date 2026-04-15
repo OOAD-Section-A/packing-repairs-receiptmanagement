@@ -4,6 +4,7 @@ import com.repairs.entities.RepairRequest;
 import com.repairs.enums.RepairType;
 import com.repairs.interfaces.view.IRepairRequestIntakeView;
 import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -26,10 +27,21 @@ public class GUIRepairRequestIntakeView extends JFrame implements IRepairRequest
     private JLabel statusLabel;
     private JPanel mainPanel;
 
+    // Modern color palette (shared with other views)
+    private static final Color BG_PRIMARY = new Color(25, 28, 36);
+    private static final Color BG_CARD = new Color(35, 39, 50);
+    private static final Color BG_INPUT = new Color(44, 49, 63);
+    private static final Color ACCENT_BLUE = new Color(88, 136, 255);
+    private static final Color ACCENT_GREEN = new Color(72, 199, 142);
+    private static final Color ACCENT_RED = new Color(255, 89, 94);
+    private static final Color TEXT_PRIMARY = new Color(230, 233, 240);
+    private static final Color TEXT_SECONDARY = new Color(150, 158, 175);
+    private static final Color BORDER_SUBTLE = new Color(55, 60, 75);
+
     public GUIRepairRequestIntakeView() {
         setTitle("Repair Request Intake Form");
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        setSize(500, 600);
+        setSize(560, 640);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -38,138 +50,209 @@ public class GUIRepairRequestIntakeView extends JFrame implements IRepairRequest
     }
 
     private void initializeComponents() {
-        mainPanel = new JPanel();
-        mainPanel.setLayout(new GridBagLayout());
-        mainPanel.setBackground(new Color(240, 240, 240));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainPanel = new JPanel(new BorderLayout(0, 0));
+        mainPanel.setBackground(BG_PRIMARY);
 
-        JPanel headerPanel = new JPanel(new BorderLayout(10, 10));
-        headerPanel.setBackground(new Color(240, 240, 240));
-        backButton = new JButton("Back to Dashboard");
-        backButton.setFocusable(false);
-        JLabel helperLabel = new JLabel("Tip: Use customer IDs like C10001 and add a clear issue description.");
-        helperLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        helperLabel.setForeground(new Color(80, 80, 80));
-        headerPanel.add(backButton, BorderLayout.WEST);
-        headerPanel.add(helperLabel, BorderLayout.CENTER);
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        mainPanel.add(headerPanel, gbc);
+        // --- Top Bar ---
+        JPanel topBar = new JPanel(new BorderLayout(12, 0));
+        topBar.setBackground(BG_CARD);
+        topBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_SUBTLE),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
+        backButton = createStyledButton("← Dashboard", TEXT_SECONDARY, BG_INPUT);
+        backButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        topBar.add(backButton, BorderLayout.WEST);
 
-        // Title
-        JLabel titleLabel = new JLabel("Repair Request Intake Form");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.gridwidth = 2;
-        mainPanel.add(titleLabel, gbc);
+        JLabel titleLabel = new JLabel("New Repair Request");
+        titleLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 17));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        topBar.add(titleLabel, BorderLayout.CENTER);
 
-        JPanel selectionPanel = new JPanel(new GridBagLayout());
-        selectionPanel.setBackground(new Color(240, 240, 240));
-        GridBagConstraints sgbc = new GridBagConstraints();
-        sgbc.insets = new Insets(4, 4, 4, 4);
-        sgbc.fill = GridBagConstraints.HORIZONTAL;
+        JLabel helperLabel = new JLabel("Use C10001 format for IDs  ");
+        helperLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        helperLabel.setForeground(TEXT_SECONDARY);
+        topBar.add(helperLabel, BorderLayout.EAST);
+        mainPanel.add(topBar, BorderLayout.NORTH);
 
-        sgbc.gridx = 0;
-        sgbc.gridy = 0;
-        selectionPanel.add(new JLabel("Existing Request:"), sgbc);
+        // --- Center Content ---
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setBackground(BG_PRIMARY);
+        centerPanel.setBorder(BorderFactory.createEmptyBorder(12, 16, 8, 16));
 
-        sgbc.gridx = 1;
-        sgbc.weightx = 1.0;
+        // Existing Requests Card
+        JPanel existingCard = createCard("Existing Requests");
+        existingCard.setLayout(new GridBagLayout());
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(4, 6, 4, 6);
+        g.fill = GridBagConstraints.HORIZONTAL;
+
+        g.gridx = 0; g.gridy = 0;
+        existingCard.add(styledLabel("Request"), g);
+        g.gridx = 1; g.weightx = 1.0;
         requestSelector = new JComboBox<>();
-        requestSelector.setPrototypeDisplayValue("REQ-0000");
-        selectionPanel.add(requestSelector, sgbc);
+        styleComboBox(requestSelector);
+        existingCard.add(requestSelector, g);
+        g.gridx = 2; g.weightx = 0;
+        refreshRequestsButton = createStyledButton("Refresh", TEXT_PRIMARY, ACCENT_BLUE.darker());
+        existingCard.add(refreshRequestsButton, g);
+        g.gridx = 3;
+        checkStatusButton = createStyledButton("Check Status", TEXT_PRIMARY, BG_INPUT);
+        existingCard.add(checkStatusButton, g);
 
-        sgbc.gridx = 2;
-        sgbc.weightx = 0;
-        refreshRequestsButton = new JButton("Refresh");
-        selectionPanel.add(refreshRequestsButton, sgbc);
+        centerPanel.add(existingCard);
+        centerPanel.add(Box.createVerticalStrut(10));
 
-        sgbc.gridx = 3;
-        checkStatusButton = new JButton("Check Status");
-        selectionPanel.add(checkStatusButton, sgbc);
+        // New Request Form Card
+        JPanel formCard = createCard("Request Details");
+        formCard.setLayout(new GridBagLayout());
+        g = new GridBagConstraints();
+        g.insets = new Insets(6, 8, 6, 8);
+        g.fill = GridBagConstraints.HORIZONTAL;
+        g.anchor = GridBagConstraints.WEST;
 
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 2;
-        mainPanel.add(selectionPanel, gbc);
-
-        // Request ID
-        gbc.gridwidth = 1;
-        gbc.gridy = 3;
-        mainPanel.add(new JLabel("Request ID:"), gbc);
-        gbc.gridx = 1;
-        requestIdField = new JTextField(20);
+        g.gridx = 0; g.gridy = 0;
+        formCard.add(styledLabel("Request ID"), g);
+        g.gridx = 1; g.weightx = 1.0;
+        requestIdField = styledTextField(20);
         requestIdField.setText("REQ-" + System.currentTimeMillis() % 10000);
         requestIdField.setToolTipText("Auto-generated request identifier. You can edit if needed.");
-        mainPanel.add(requestIdField, gbc);
+        formCard.add(requestIdField, g);
 
-        // Customer ID
-        gbc.gridx = 0;
-        gbc.gridy = 4;
-        mainPanel.add(new JLabel("Customer ID:"), gbc);
-        gbc.gridx = 1;
-        customerIdField = new JTextField(20);
+        g.gridx = 0; g.gridy = 1; g.weightx = 0;
+        formCard.add(styledLabel("Customer ID"), g);
+        g.gridx = 1; g.weightx = 1.0;
+        customerIdField = styledTextField(20);
         customerIdField.setToolTipText("Enter customer id, for example C10001.");
-        mainPanel.add(customerIdField, gbc);
+        formCard.add(customerIdField, g);
 
-        // Repair Type
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        mainPanel.add(new JLabel("Repair Type:"), gbc);
-        gbc.gridx = 1;
+        g.gridx = 0; g.gridy = 2; g.weightx = 0;
+        formCard.add(styledLabel("Repair Type"), g);
+        g.gridx = 1; g.weightx = 1.0;
         repairTypeCombo = new JComboBox<>(RepairType.values());
-        mainPanel.add(repairTypeCombo, gbc);
+        repairTypeCombo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        repairTypeCombo.setBackground(BG_INPUT);
+        repairTypeCombo.setForeground(TEXT_PRIMARY);
+        repairTypeCombo.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+        formCard.add(repairTypeCombo, g);
 
-        // Description
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        gbc.gridwidth = 1;
-        mainPanel.add(new JLabel("Description:"), gbc);
-        gbc.gridx = 1;
-        gbc.gridheight = 3;
+        g.gridx = 0; g.gridy = 3; g.weightx = 0;
+        g.anchor = GridBagConstraints.NORTHWEST;
+        formCard.add(styledLabel("Description"), g);
+        g.gridx = 1; g.weightx = 1.0;
+        g.gridheight = 3;
         descriptionArea = new JTextArea(5, 20);
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
+        descriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        descriptionArea.setBackground(BG_INPUT);
+        descriptionArea.setForeground(TEXT_PRIMARY);
+        descriptionArea.setCaretColor(TEXT_PRIMARY);
+        descriptionArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         descriptionArea.setToolTipText("Describe symptoms, location, and urgency.");
         JScrollPane scrollPane = new JScrollPane(descriptionArea);
-        mainPanel.add(scrollPane, gbc);
+        scrollPane.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+        formCard.add(scrollPane, g);
 
-        // Status Label
-        gbc.gridx = 0;
-        gbc.gridy = 9;
-        gbc.gridwidth = 2;
-        gbc.gridheight = 1;
+        centerPanel.add(formCard);
+        centerPanel.add(Box.createVerticalStrut(10));
+
+        // Status Card
+        JPanel statusCard = createCard("Status");
+        statusCard.setLayout(new BorderLayout(8, 4));
         statusLabel = new JLabel(" ");
-        statusLabel.setForeground(Color.BLACK);
-        mainPanel.add(statusLabel, gbc);
+        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        statusLabel.setForeground(TEXT_SECONDARY);
+        statusCard.add(statusLabel, BorderLayout.CENTER);
+        centerPanel.add(statusCard);
+        centerPanel.add(Box.createVerticalStrut(6));
 
-        JPanel actionPanel = new JPanel(new GridLayout(1, 2, 10, 10));
-        actionPanel.setBackground(new Color(240, 240, 240));
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-        resetButton = new JButton("Reset Form");
-        resetButton.setBackground(new Color(127, 140, 141));
-        resetButton.setForeground(Color.WHITE);
+        // --- Bottom Action Bar ---
+        JPanel actionBar = new JPanel(new GridLayout(1, 2, 12, 0));
+        actionBar.setBackground(BG_CARD);
+        actionBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, BORDER_SUBTLE),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
+
+        resetButton = createActionButton("Reset Form", new Color(127, 140, 151));
         resetButton.addActionListener(e -> clearForm());
-        actionPanel.add(resetButton);
+        submitButton = createActionButton("Submit Request", ACCENT_BLUE);
 
-        submitButton = new JButton("Submit Request");
-        submitButton.setBackground(new Color(52, 152, 219));
-        submitButton.setForeground(Color.WHITE);
-        submitButton.setFont(new Font("Arial", Font.BOLD, 12));
-        actionPanel.add(submitButton);
+        actionBar.add(resetButton);
+        actionBar.add(submitButton);
+        mainPanel.add(actionBar, BorderLayout.SOUTH);
 
-        // Submit Button
-        gbc.gridy = 10;
-        mainPanel.add(actionPanel, gbc);
-
-        JScrollPane mainScrollPane = new JScrollPane(mainPanel);
-        mainScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        add(mainScrollPane);
+        setContentPane(mainPanel);
     }
+
+    // =============== Styling Helpers ===============
+
+    private JPanel createCard(String title) {
+        JPanel card = new JPanel();
+        card.setBackground(BG_CARD);
+        TitledBorder tb = BorderFactory.createTitledBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true), title);
+        tb.setTitleColor(TEXT_SECONDARY);
+        tb.setTitleFont(new Font("Segoe UI", Font.PLAIN, 11));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                tb, BorderFactory.createEmptyBorder(6, 10, 8, 10)));
+        return card;
+    }
+
+    private JLabel styledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        label.setForeground(TEXT_SECONDARY);
+        return label;
+    }
+
+    private JTextField styledTextField(int columns) {
+        JTextField field = new JTextField(columns);
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        field.setBackground(BG_INPUT);
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        return field;
+    }
+
+    private void styleComboBox(JComboBox<String> combo) {
+        combo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        combo.setBackground(BG_INPUT);
+        combo.setForeground(TEXT_PRIMARY);
+        combo.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+    }
+
+    private JButton createStyledButton(String text, Color fg, Color bg) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        button.setForeground(fg);
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JButton createActionButton(String text, Color bg) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        button.setForeground(Color.WHITE);
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    // =============== IRepairRequestIntakeView Implementation ===============
 
     @Override
     public void showRepairRequestForm() {
@@ -183,21 +266,21 @@ public class GUIRepairRequestIntakeView extends JFrame implements IRepairRequest
             errorMsg.append("• ").append(error).append("\n");
         }
         JOptionPane.showMessageDialog(this, errorMsg.toString(), "Validation Errors", JOptionPane.ERROR_MESSAGE);
-        statusLabel.setText("❌ Validation Failed");
-        statusLabel.setForeground(Color.RED);
+        statusLabel.setText("Validation Failed");
+        statusLabel.setForeground(ACCENT_RED);
     }
 
     @Override
     public void displayValidationSuccess() {
         statusLabel.setText("✓ Validation Passed");
-        statusLabel.setForeground(new Color(39, 174, 96));
+        statusLabel.setForeground(ACCENT_GREEN);
     }
 
     @Override
     public void displayScheduledDate(String scheduledDate) {
         JOptionPane.showMessageDialog(this, "Scheduled Date: " + scheduledDate, "Scheduling Success", JOptionPane.INFORMATION_MESSAGE);
-        statusLabel.setText("📅 Scheduled for: " + scheduledDate);
-        statusLabel.setForeground(new Color(39, 174, 96));
+        statusLabel.setText("Scheduled for: " + scheduledDate);
+        statusLabel.setForeground(ACCENT_GREEN);
     }
 
     @Override
@@ -207,12 +290,13 @@ public class GUIRepairRequestIntakeView extends JFrame implements IRepairRequest
         repairTypeCombo.setSelectedIndex(0);
         descriptionArea.setText("");
         statusLabel.setText(" ");
+        statusLabel.setForeground(TEXT_SECONDARY);
     }
 
     @Override
     public void showLoadingIndicator(String message) {
         statusLabel.setText("⏳ " + message);
-        statusLabel.setForeground(Color.ORANGE);
+        statusLabel.setForeground(new Color(255, 171, 64));
         submitButton.setEnabled(false);
     }
 
@@ -224,15 +308,15 @@ public class GUIRepairRequestIntakeView extends JFrame implements IRepairRequest
     @Override
     public void displayError(String errorMessage) {
         JOptionPane.showMessageDialog(this, errorMessage, "Error", JOptionPane.ERROR_MESSAGE);
-        statusLabel.setText("❌ " + errorMessage);
-        statusLabel.setForeground(Color.RED);
+        statusLabel.setText("Error: " + errorMessage);
+        statusLabel.setForeground(ACCENT_RED);
     }
 
     @Override
     public void displaySuccess(String successMessage) {
         JOptionPane.showMessageDialog(this, successMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
         statusLabel.setText("✓ " + successMessage);
-        statusLabel.setForeground(new Color(39, 174, 96));
+        statusLabel.setForeground(ACCENT_GREEN);
     }
 
     @Override

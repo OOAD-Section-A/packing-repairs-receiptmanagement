@@ -5,7 +5,10 @@ import com.repairs.entities.Receipt;
 import com.repairs.enums.PaymentStatus;
 import com.repairs.interfaces.view.IBillingView;
 import javax.swing.*;
+import javax.swing.border.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,10 +38,22 @@ public class GUIBillingView extends JFrame implements IBillingView {
     private JTable billsTable;
     private DefaultTableModel tableModel;
 
+    // Modern color palette (shared with other views)
+    private static final Color BG_PRIMARY = new Color(25, 28, 36);
+    private static final Color BG_CARD = new Color(35, 39, 50);
+    private static final Color BG_INPUT = new Color(44, 49, 63);
+    private static final Color ACCENT_BLUE = new Color(88, 136, 255);
+    private static final Color ACCENT_GREEN = new Color(72, 199, 142);
+    private static final Color ACCENT_ORANGE = new Color(255, 171, 64);
+    private static final Color ACCENT_RED = new Color(255, 89, 94);
+    private static final Color TEXT_PRIMARY = new Color(230, 233, 240);
+    private static final Color TEXT_SECONDARY = new Color(150, 158, 175);
+    private static final Color BORDER_SUBTLE = new Color(55, 60, 75);
+
     public GUIBillingView() {
         setTitle("Billing & Payment Management");
         setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
-        setSize(800, 700);
+        setSize(860, 740);
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -47,205 +62,293 @@ public class GUIBillingView extends JFrame implements IBillingView {
     }
 
     private void initializeComponents() {
-        JPanel container = new JPanel(new BorderLayout(10, 10));
-        container.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        JPanel container = new JPanel(new BorderLayout(0, 0));
+        container.setBackground(BG_PRIMARY);
 
-        JPanel topBar = new JPanel(new BorderLayout(10, 10));
-        topBar.setBackground(new Color(240, 240, 240));
-        backButton = new JButton("Back to Dashboard");
-        backButton.setFocusable(false);
-        JLabel tipLabel = new JLabel("Tip: Enter a receipt ID directly when processing payment.");
-        tipLabel.setFont(new Font("Arial", Font.PLAIN, 11));
-        tipLabel.setForeground(new Color(80, 80, 80));
+        // --- Top Bar ---
+        JPanel topBar = new JPanel(new BorderLayout(12, 0));
+        topBar.setBackground(BG_CARD);
+        topBar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, BORDER_SUBTLE),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
+        backButton = createStyledButton("← Dashboard", TEXT_SECONDARY, BG_INPUT);
+        backButton.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         topBar.add(backButton, BorderLayout.WEST);
-        topBar.add(tipLabel, BorderLayout.CENTER);
+
+        JLabel titleLabel = new JLabel("Billing & Payment Management");
+        titleLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 17));
+        titleLabel.setForeground(TEXT_PRIMARY);
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        topBar.add(titleLabel, BorderLayout.CENTER);
+
+        JLabel tipLabel = new JLabel("Enter receipt ID for direct payment  ");
+        tipLabel.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        tipLabel.setForeground(TEXT_SECONDARY);
+        topBar.add(tipLabel, BorderLayout.EAST);
         container.add(topBar, BorderLayout.NORTH);
 
+        // --- Tabbed Pane ---
         JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI Semibold", Font.BOLD, 12));
+        tabbedPane.setBackground(BG_PRIMARY);
+        tabbedPane.setForeground(TEXT_PRIMARY);
 
-        // Estimate Tab
-        tabbedPane.addTab("Cost Estimate", createEstimatePanel());
-
-        // Billing Tab
-        tabbedPane.addTab("Bills & Receipts", createBillingPanel());
+        tabbedPane.addTab("  Cost Estimate  ", createEstimatePanel());
+        tabbedPane.addTab("  Bills & Receipts  ", createBillingPanel());
 
         container.add(tabbedPane, BorderLayout.CENTER);
-        add(container);
+        setContentPane(container);
     }
 
     private JPanel createEstimatePanel() {
         JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        panel.setBackground(new Color(240, 240, 240));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(BG_PRIMARY);
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
 
-        // Title
-        JLabel titleLabel = new JLabel("Cost Estimate");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        panel.add(titleLabel, gbc);
+        // Job Selection Card
+        JPanel jobCard = createCard("Job & Receipt Selection");
+        jobCard.setLayout(new GridBagLayout());
+        GridBagConstraints g = new GridBagConstraints();
+        g.insets = new Insets(4, 6, 4, 6);
+        g.fill = GridBagConstraints.HORIZONTAL;
 
-        // Estimate ID
-        gbc.gridwidth = 1;
-        gbc.gridy = 1;
-        gbc.gridx = 0;
-        panel.add(new JLabel("Estimate ID:"), gbc);
-        gbc.gridx = 1;
+        g.gridx = 0; g.gridy = 0;
+        jobCard.add(styledLabel("Estimate ID"), g);
+        g.gridx = 1;
         estimateIdLabel = new JLabel("-");
-        panel.add(estimateIdLabel, gbc);
+        estimateIdLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 12));
+        estimateIdLabel.setForeground(ACCENT_BLUE);
+        jobCard.add(estimateIdLabel, g);
 
-        // Job ID
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        panel.add(new JLabel("Job ID:"), gbc);
-        gbc.gridx = 1;
+        g.gridx = 0; g.gridy = 1;
+        jobCard.add(styledLabel("Job ID"), g);
+        g.gridx = 1;
         jobIdLabel = new JLabel("-");
-        panel.add(jobIdLabel, gbc);
+        jobIdLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 12));
+        jobIdLabel.setForeground(ACCENT_BLUE);
+        jobCard.add(jobIdLabel, g);
 
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        panel.add(new JLabel("Completed Job:"), gbc);
-        gbc.gridx = 1;
+        g.gridx = 0; g.gridy = 2;
+        jobCard.add(styledLabel("Completed Job"), g);
+        g.gridx = 1; g.weightx = 1.0;
         completedJobSelector = new JComboBox<>();
-        completedJobSelector.setPrototypeDisplayValue("JOB-0000");
-        panel.add(completedJobSelector, gbc);
+        styleComboBox(completedJobSelector);
+        jobCard.add(completedJobSelector, g);
 
-        gbc.gridx = 0;
-        gbc.gridy = 4;
+        g.gridx = 0; g.gridy = 3; g.weightx = 0;
+        g.gridwidth = 2;
         JPanel jobActionPanel = new JPanel(new GridLayout(1, 3, 8, 8));
-        jobActionPanel.setBackground(new Color(240, 240, 240));
-        refreshJobsButton = new JButton("Refresh Jobs");
-        generateEstimateButton = new JButton("Generate Estimate");
-        generateBillButton = new JButton("Generate Bill");
+        jobActionPanel.setOpaque(false);
+        refreshJobsButton = createStyledButton("Refresh Jobs", TEXT_PRIMARY, ACCENT_BLUE.darker());
+        generateEstimateButton = createStyledButton("Generate Estimate", TEXT_PRIMARY, BG_INPUT);
+        generateBillButton = createStyledButton("Generate Bill", TEXT_PRIMARY, BG_INPUT);
         jobActionPanel.add(refreshJobsButton);
         jobActionPanel.add(generateEstimateButton);
         jobActionPanel.add(generateBillButton);
-        gbc.gridwidth = 2;
-        panel.add(jobActionPanel, gbc);
-        gbc.gridwidth = 1;
+        jobCard.add(jobActionPanel, g);
+        g.gridwidth = 1;
 
-        gbc.gridx = 0;
-        gbc.gridy = 5;
-        panel.add(new JLabel("Receipt ID Input:"), gbc);
-        gbc.gridx = 1;
-        receiptIdInputField = new JTextField(20);
+        g.gridx = 0; g.gridy = 4; g.weightx = 0;
+        jobCard.add(styledLabel("Receipt ID"), g);
+        g.gridx = 1; g.weightx = 1.0;
+        receiptIdInputField = styledTextField(20);
         receiptIdInputField.setToolTipText("Use this field to process payment or discount for a known receipt id.");
-        panel.add(receiptIdInputField, gbc);
+        jobCard.add(receiptIdInputField, g);
 
-        gbc.gridx = 0;
-        gbc.gridy = 6;
-        panel.add(new JLabel("Or Select Receipt:"), gbc);
-        gbc.gridx = 1;
+        g.gridx = 0; g.gridy = 5; g.weightx = 0;
+        jobCard.add(styledLabel("Or Select"), g);
+        g.gridx = 1; g.weightx = 1.0;
         receiptSelector = new JComboBox<>();
-        receiptSelector.setPrototypeDisplayValue("RCT-0000");
-        panel.add(receiptSelector, gbc);
+        styleComboBox(receiptSelector);
+        jobCard.add(receiptSelector, g);
 
-        gbc.gridx = 0;
-        gbc.gridy = 7;
-        gbc.gridwidth = 2;
-        loadReceiptButton = new JButton("Load Receipt Details");
-        panel.add(loadReceiptButton, gbc);
-        gbc.gridwidth = 1;
+        g.gridx = 0; g.gridy = 6; g.gridwidth = 2; g.weightx = 0;
+        loadReceiptButton = createStyledButton("Load Receipt Details", TEXT_PRIMARY, ACCENT_BLUE.darker());
+        jobCard.add(loadReceiptButton, g);
+        g.gridwidth = 1;
 
-        // Cost Breakdown
-        gbc.gridx = 0;
-        gbc.gridy = 8;
-        gbc.gridwidth = 2;
-        panel.add(new JLabel("Cost Breakdown:"), gbc);
-        gbc.gridy = 9;
-        gbc.gridheight = 3;
-        costBreakdownArea = new JTextArea(8, 50);
+        panel.add(jobCard);
+        panel.add(Box.createVerticalStrut(8));
+
+        // Cost Breakdown Card
+        JPanel costCard = createCard("Cost Breakdown");
+        costCard.setLayout(new BorderLayout(6, 6));
+
+        costBreakdownArea = new JTextArea(7, 50);
         costBreakdownArea.setEditable(false);
-        costBreakdownArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        costBreakdownArea.setFont(new Font("Consolas", Font.PLAIN, 12));
+        costBreakdownArea.setBackground(BG_INPUT);
+        costBreakdownArea.setForeground(TEXT_PRIMARY);
+        costBreakdownArea.setCaretColor(TEXT_PRIMARY);
+        costBreakdownArea.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
         JScrollPane scrollPane = new JScrollPane(costBreakdownArea);
-        panel.add(scrollPane, gbc);
+        scrollPane.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+        costCard.add(scrollPane, BorderLayout.CENTER);
 
-        // Total Amount
-        gbc.gridx = 0;
-        gbc.gridy = 12;
-        gbc.gridwidth = 1;
-        gbc.gridheight = 1;
-        panel.add(new JLabel("Total Amount:"), gbc);
-        gbc.gridx = 1;
+        JPanel summaryPanel = new JPanel(new GridLayout(1, 2, 20, 0));
+        summaryPanel.setOpaque(false);
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        totalPanel.setOpaque(false);
+        totalPanel.add(styledLabel("Total Amount:"));
         totalAmountLabel = new JLabel("$0.00");
-        totalAmountLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        totalAmountLabel.setForeground(new Color(39, 174, 96));
-        panel.add(totalAmountLabel, gbc);
+        totalAmountLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 15));
+        totalAmountLabel.setForeground(ACCENT_GREEN);
+        totalPanel.add(totalAmountLabel);
 
-        // Payment Status
-        gbc.gridx = 0;
-        gbc.gridy = 13;
-        panel.add(new JLabel("Payment Status:"), gbc);
-        gbc.gridx = 1;
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 2));
+        statusPanel.setOpaque(false);
+        statusPanel.add(styledLabel("Payment Status:"));
         paymentStatusLabel = new JLabel("PENDING");
-        paymentStatusLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        paymentStatusLabel.setForeground(new Color(231, 76, 60));
-        panel.add(paymentStatusLabel, gbc);
+        paymentStatusLabel.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        paymentStatusLabel.setForeground(ACCENT_ORANGE);
+        statusPanel.add(paymentStatusLabel);
 
-        // Buttons
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(new Color(240, 240, 240));
-        buttonPanel.setLayout(new GridLayout(1, 4, 10, 10));
+        summaryPanel.add(totalPanel);
+        summaryPanel.add(statusPanel);
+        costCard.add(summaryPanel, BorderLayout.SOUTH);
 
-        payButton = new JButton("Process Payment");
-        payButton.setBackground(new Color(39, 174, 96));
-        payButton.setForeground(Color.WHITE);
-        buttonPanel.add(payButton);
+        panel.add(costCard);
+        panel.add(Box.createVerticalStrut(8));
 
-        refundButton = new JButton("Refund");
-        refundButton.setBackground(new Color(231, 76, 60));
-        refundButton.setForeground(Color.WHITE);
+        // Action Buttons
+        JPanel actionBar = new JPanel(new GridLayout(1, 3, 10, 0));
+        actionBar.setOpaque(false);
+
+        payButton = createActionButton("Process Payment", ACCENT_GREEN);
+        refundButton = createActionButton("Refund", ACCENT_RED);
         refundButton.setEnabled(false);
-        buttonPanel.add(refundButton);
+        discountButton = createActionButton("Apply Discount", ACCENT_BLUE);
 
-        discountButton = new JButton("Apply Discount");
-        discountButton.setBackground(new Color(52, 152, 219));
-        discountButton.setForeground(Color.WHITE);
-        buttonPanel.add(discountButton);
-
-        gbc.gridx = 0;
-        gbc.gridy = 14;
-        gbc.gridwidth = 2;
-        panel.add(buttonPanel, gbc);
+        actionBar.add(payButton);
+        actionBar.add(refundButton);
+        actionBar.add(discountButton);
+        panel.add(actionBar);
 
         return panel;
     }
 
     private JPanel createBillingPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout(10, 10));
-        panel.setBackground(new Color(240, 240, 240));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
+        panel.setBackground(BG_PRIMARY);
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
-        // Title
-        JLabel titleLabel = new JLabel("Outstanding & Overdue Bills");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-
-        JPanel tableHeader = new JPanel(new BorderLayout(8, 8));
-        tableHeader.setBackground(new Color(240, 240, 240));
-        tableHeader.add(titleLabel, BorderLayout.WEST);
-        refreshBillsButton = new JButton("Refresh Outstanding");
-        tableHeader.add(refreshBillsButton, BorderLayout.EAST);
-        panel.add(tableHeader, BorderLayout.NORTH);
+        JPanel headerPanel = new JPanel(new BorderLayout(8, 0));
+        headerPanel.setOpaque(false);
+        JLabel tableTitle = new JLabel("Outstanding & Overdue Bills");
+        tableTitle.setFont(new Font("Segoe UI Semibold", Font.BOLD, 15));
+        tableTitle.setForeground(TEXT_PRIMARY);
+        headerPanel.add(tableTitle, BorderLayout.WEST);
+        refreshBillsButton = createStyledButton("Refresh Outstanding", TEXT_PRIMARY, ACCENT_BLUE.darker());
+        headerPanel.add(refreshBillsButton, BorderLayout.EAST);
+        panel.add(headerPanel, BorderLayout.NORTH);
 
         // Table
         String[] columnNames = {"Receipt ID", "Amount", "Status", "Date"};
-        tableModel = new DefaultTableModel(columnNames, 0);
+        tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
         billsTable = new JTable(tableModel);
-        billsTable.setRowHeight(25);
-        billsTable.getTableHeader().setBackground(new Color(52, 152, 219));
-        billsTable.getTableHeader().setForeground(Color.WHITE);
-        billsTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+        billsTable.setRowHeight(30);
+        billsTable.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        billsTable.setBackground(BG_CARD);
+        billsTable.setForeground(TEXT_PRIMARY);
+        billsTable.setGridColor(BORDER_SUBTLE);
+        billsTable.setSelectionBackground(ACCENT_BLUE.darker());
+        billsTable.setSelectionForeground(Color.WHITE);
+        billsTable.setShowGrid(true);
+        billsTable.setIntercellSpacing(new Dimension(1, 1));
+
+        DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer();
+        cellRenderer.setBackground(BG_CARD);
+        cellRenderer.setForeground(TEXT_PRIMARY);
+        cellRenderer.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        for (int i = 0; i < billsTable.getColumnCount(); i++) {
+            billsTable.getColumnModel().getColumn(i).setCellRenderer(cellRenderer);
+        }
+
+        JTableHeader header = billsTable.getTableHeader();
+        header.setBackground(BG_INPUT);
+        header.setForeground(ACCENT_BLUE);
+        header.setFont(new Font("Segoe UI Semibold", Font.BOLD, 12));
+        header.setBorder(new LineBorder(BORDER_SUBTLE));
 
         JScrollPane scrollPane = new JScrollPane(billsTable);
+        scrollPane.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+        scrollPane.getViewport().setBackground(BG_CARD);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         return panel;
     }
+
+    // =============== Styling Helpers ===============
+
+    private JPanel createCard(String title) {
+        JPanel card = new JPanel();
+        card.setBackground(BG_CARD);
+        TitledBorder tb = BorderFactory.createTitledBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true), title);
+        tb.setTitleColor(TEXT_SECONDARY);
+        tb.setTitleFont(new Font("Segoe UI", Font.PLAIN, 11));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                tb, BorderFactory.createEmptyBorder(6, 10, 8, 10)));
+        return card;
+    }
+
+    private JLabel styledLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        label.setForeground(TEXT_SECONDARY);
+        return label;
+    }
+
+    private JTextField styledTextField(int columns) {
+        JTextField field = new JTextField(columns);
+        field.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        field.setBackground(BG_INPUT);
+        field.setForeground(TEXT_PRIMARY);
+        field.setCaretColor(TEXT_PRIMARY);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+        return field;
+    }
+
+    private void styleComboBox(JComboBox<String> combo) {
+        combo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        combo.setBackground(BG_INPUT);
+        combo.setForeground(TEXT_PRIMARY);
+        combo.setBorder(new LineBorder(BORDER_SUBTLE, 1, true));
+    }
+
+    private JButton createStyledButton(String text, Color fg, Color bg) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        button.setForeground(fg);
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createCompoundBorder(
+                new LineBorder(BORDER_SUBTLE, 1, true),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private JButton createActionButton(String text, Color bg) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI Semibold", Font.BOLD, 13));
+        button.setForeground(Color.WHITE);
+        button.setBackground(bg);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    // =============== IBillingView Implementation ===============
 
     @Override
     public void displayCostEstimate(CostEstimate estimate) {
@@ -267,10 +370,10 @@ public class GUIBillingView extends JFrame implements IBillingView {
     public void showPaymentStatus(PaymentStatus status) {
         paymentStatusLabel.setText(status.toString());
         Color statusColor = switch (status) {
-            case PROCESSED -> new Color(39, 174, 96);
-            case FAILED -> new Color(231, 76, 60);
-            case PENDING -> new Color(230, 126, 34);
-            case REFUNDED -> new Color(52, 152, 219);
+            case PROCESSED -> ACCENT_GREEN;
+            case FAILED -> ACCENT_RED;
+            case PENDING -> ACCENT_ORANGE;
+            case REFUNDED -> ACCENT_BLUE;
         };
         paymentStatusLabel.setForeground(statusColor);
     }
@@ -309,23 +412,23 @@ public class GUIBillingView extends JFrame implements IBillingView {
     @Override
     public void displayCostBreakdown(BigDecimal laborCost, BigDecimal partsCost, BigDecimal taxAmount, BigDecimal total) {
         costBreakdownArea.setText("");
-        costBreakdownArea.append("═══════════════════════════════════\n");
-        costBreakdownArea.append("COST BREAKDOWN\n");
-        costBreakdownArea.append("═══════════════════════════════════\n\n");
-        costBreakdownArea.append(String.format("Labor Cost:        $%,10.2f\n", laborCost));
-        costBreakdownArea.append(String.format("Parts Cost:        $%,10.2f\n", partsCost));
-        costBreakdownArea.append(String.format("Subtotal:          $%,10.2f\n", laborCost.add(partsCost)));
-        costBreakdownArea.append(String.format("Tax (18%%):         $%,10.2f\n", taxAmount));
-        costBreakdownArea.append("───────────────────────────────────\n");
-        costBreakdownArea.append(String.format("TOTAL:             $%,10.2f\n", total));
-        costBreakdownArea.append("═══════════════════════════════════\n");
+        costBreakdownArea.append("══════════════════════════════════════\n");
+        costBreakdownArea.append("  COST BREAKDOWN\n");
+        costBreakdownArea.append("══════════════════════════════════════\n\n");
+        costBreakdownArea.append(String.format("  Labor Cost:        $%,10.2f\n", laborCost));
+        costBreakdownArea.append(String.format("  Parts Cost:        $%,10.2f\n", partsCost));
+        costBreakdownArea.append(String.format("  Subtotal:          $%,10.2f\n", laborCost.add(partsCost)));
+        costBreakdownArea.append(String.format("  Tax (18%%):         $%,10.2f\n", taxAmount));
+        costBreakdownArea.append("  ──────────────────────────────────\n");
+        costBreakdownArea.append(String.format("  TOTAL:             $%,10.2f\n", total));
+        costBreakdownArea.append("══════════════════════════════════════\n");
         totalAmountLabel.setText("$" + total);
     }
 
     @Override
     public void displayDiscountApplied(BigDecimal discountAmount, BigDecimal newTotal) {
-        costBreakdownArea.append("\n✓ Discount Applied: -$" + discountAmount + "\n");
-        costBreakdownArea.append("New Total: $" + newTotal + "\n");
+        costBreakdownArea.append("\n  ✓ Discount Applied: -$" + discountAmount + "\n");
+        costBreakdownArea.append("  New Total: $" + newTotal + "\n");
         totalAmountLabel.setText("$" + newTotal);
     }
 
@@ -386,17 +489,18 @@ public class GUIBillingView extends JFrame implements IBillingView {
         costBreakdownArea.setText("");
         totalAmountLabel.setText("$0.00");
         paymentStatusLabel.setText("PENDING");
+        paymentStatusLabel.setForeground(ACCENT_ORANGE);
         tableModel.setRowCount(0);
     }
 
     @Override
     public void displayEstimateValidity(boolean isValid, String expiryMessage) {
         if (isValid) {
-            costBreakdownArea.append("\n✓ ESTIMATE IS VALID\n");
+            costBreakdownArea.append("\n  ✓ ESTIMATE IS VALID\n");
         } else {
-            costBreakdownArea.append("\n❌ ESTIMATE HAS EXPIRED\n");
+            costBreakdownArea.append("\n  ✕ ESTIMATE HAS EXPIRED\n");
         }
-        costBreakdownArea.append(expiryMessage + "\n");
+        costBreakdownArea.append("  " + expiryMessage + "\n");
     }
 
     @Override
@@ -411,6 +515,8 @@ public class GUIBillingView extends JFrame implements IBillingView {
             });
         }
     }
+
+    // =============== Accessors ===============
 
     public JButton getPayButton() {
         return payButton;
@@ -493,4 +599,4 @@ public class GUIBillingView extends JFrame implements IBillingView {
     public void setBackAction(Runnable action) {
         backButton.addActionListener(e -> action.run());
     }
-} 
+}
