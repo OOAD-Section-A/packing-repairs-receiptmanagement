@@ -7,17 +7,18 @@ The Packing Subsystem for the Supply Chain Management (SCM) project. Built in **
 ## Features
 
 ### Core Packing Workflow
-- **Order Selection**: Browse all pending orders from the database (or seed data), select one or multiple orders, and submit them for packing in a single click.
-- **Concurrent Packing**: Each selected order spawns its own background `SwingWorker` thread, allowing multiple orders to be packed simultaneously with live progress bars.
-- **Strategy-Based Packing**: Fragile items automatically trigger the `FragilePackingStrategy` (extra cushioning/wrapping), while normal items use `StandardPackingStrategy`. Strategies are selected at runtime via the **Factory Method** pattern.
+- **Multi-Order Consolidation**: Select multiple orders for the **same customer**, and the system automatically merges them into a **single packing job**. Different customers still receive individual packages in parallel.
+- **Concurrent Packing**: Every unique customer job spawns its own background `SwingWorker` thread, allowing parallel throughput with live progress monitoring.
+- **Strategy-Based Packing**: Truly fragile items (crystal glassware, electronics monitors) trigger the `FragilePackingStrategy` via the **Factory Method** pattern, while standard items use the basic strategy.
 
 ### Labeling & Traceability
-- **Barcode Generation**: Every packed job receives a unique barcode label encoding `SCM|JobID|OrderID|Timestamp`.
-- **Visual Barcode Rendering**: Barcodes are rendered graphically using Java2D and can be viewed in a dedicated dialog.
+- **Barcode Generation**: Every packed job receives a unique barcode label encoding `SCM|JobID|OrderIDs|Timestamp`.
+- **Traceability View**: View graphical barcodes (Java2D) for any packed job via the "View Barcode" dialog.
 
-### Unitization
-- **Case/Pallet Grouping**: Packed jobs can be grouped into secondary (Case) or tertiary (Pallet) shipping units for easier warehouse handling.
-- **Capacity Management**: Each unit type has a default capacity (Case = 5, Pallet = 20) and tracks total weight.
+### Unitization (Shipping Preparation)
+- **Pallet Management**: Group multiple packed jobs onto **Pallets** (default capacity 20) for bulk shipping.
+- **Pallet Editing**: Add more jobs to an existing pallet or remove jobs from one via a dedicated management interface in the **"Pallets"** tab.
+- **Weight Tracking**: Units automatically calculate total weight across all merged orders and jobs.
 
 ### Integration
 - **SCM Database Module**: Uses the shared `SupplyChainDatabaseFacade` when the `database-module` JAR is on the classpath.
