@@ -5,7 +5,8 @@ import com.repairs.external.DefaultExceptionHandler;
 import com.repairs.interfaces.model.IExceptionHandler;
 import com.repairs.interfaces.model.IRepairLogger;
 import com.repairs.interfaces.model.IRepairRepository;
-import java.io.*;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -13,12 +14,11 @@ import java.util.stream.Collectors;
 
 /**
  * RepairLogger - Concrete implementation of IRepairLogger.
- * Handles logging to both file system and database.
+ * Handles logging through repository/database with optional explicit export.
  */
 public class RepairLogger implements IRepairLogger {
     private final IRepairRepository repository;
     private final IExceptionHandler exceptionHandler;
-    private final String logDirectory;
     private final List<RepairLog> inMemoryLogs;
     private final DateTimeFormatter dateFormatter;
 
@@ -29,12 +29,8 @@ public class RepairLogger implements IRepairLogger {
     public RepairLogger(IRepairRepository repository, String logDirectory, IExceptionHandler exceptionHandler) {
         this.repository = Objects.requireNonNull(repository, "Repository cannot be null");
         this.exceptionHandler = exceptionHandler != null ? exceptionHandler : new DefaultExceptionHandler();
-        this.logDirectory = logDirectory != null ? logDirectory : "./logs";
         this.inMemoryLogs = Collections.synchronizedList(new ArrayList<>());
         this.dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
-        // Create log directory if it doesn't exist
-        new File(this.logDirectory).mkdirs();
     }
 
     @Override
@@ -54,9 +50,6 @@ public class RepairLogger implements IRepairLogger {
 
             // Persist into repository/database first.
             repository.saveRepairLog(new RepairLog(logId, jobId, logEntry, severity, operationType));
-
-            // Write to file
-            writeToFile(jobId, logId, message, severity, operationType);
 
             // Store in memory (limited size)
             if (inMemoryLogs.size() < 10000) {
@@ -167,32 +160,6 @@ public class RepairLogger implements IRepairLogger {
     }
 
     // ============ Helper Methods ============
-
-    /**
-     * Write log to file system
-     */
-    private void writeToFile(String jobId, String logId, String message, 
-                            String severity, String operationType) {
-        try {
-            String logFileName = logDirectory + File.separator + jobId + ".log";
-
-            try (PrintWriter writer = new PrintWriter(
-                    new FileWriter(logFileName, true))) { // Append mode
-                LocalDateTime timestamp = LocalDateTime.now();
-                String logLine = String.format("[%s] %s - %s: %s",
-                        timestamp.format(dateFormatter),
-                        severity,
-                        operationType,
-                        message);
-
-                writer.println(logLine);
-                writer.flush();
-            }
-
-        } catch (IOException e) {
-            exceptionHandler.handleException(e, "RepairLogger.writeToFile");
-        }
-    }
 
     /**
      * Generate unique log ID

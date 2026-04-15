@@ -17,6 +17,7 @@ import java.util.List;
 public class GUIBillingView extends JFrame implements IBillingView {
     private JTextField receiptIdInputField;
     private JComboBox<String> receiptSelector;
+    private JComboBox<String> completedJobSelector;
     private JLabel estimateIdLabel;
     private JLabel jobIdLabel;
     private JTextArea costBreakdownArea;
@@ -24,6 +25,10 @@ public class GUIBillingView extends JFrame implements IBillingView {
     private JLabel paymentStatusLabel;
     private JButton backButton;
     private JButton refreshBillsButton;
+    private JButton refreshJobsButton;
+    private JButton generateEstimateButton;
+    private JButton generateBillButton;
+    private JButton loadReceiptButton;
     private JButton payButton;
     private JButton refundButton;
     private JButton discountButton;
@@ -103,6 +108,28 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
         gbc.gridx = 0;
         gbc.gridy = 3;
+        panel.add(new JLabel("Completed Job:"), gbc);
+        gbc.gridx = 1;
+        completedJobSelector = new JComboBox<>();
+        completedJobSelector.setPrototypeDisplayValue("JOB-0000");
+        panel.add(completedJobSelector, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        JPanel jobActionPanel = new JPanel(new GridLayout(1, 3, 8, 8));
+        jobActionPanel.setBackground(new Color(240, 240, 240));
+        refreshJobsButton = new JButton("Refresh Jobs");
+        generateEstimateButton = new JButton("Generate Estimate");
+        generateBillButton = new JButton("Generate Bill");
+        jobActionPanel.add(refreshJobsButton);
+        jobActionPanel.add(generateEstimateButton);
+        jobActionPanel.add(generateBillButton);
+        gbc.gridwidth = 2;
+        panel.add(jobActionPanel, gbc);
+        gbc.gridwidth = 1;
+
+        gbc.gridx = 0;
+        gbc.gridy = 5;
         panel.add(new JLabel("Receipt ID Input:"), gbc);
         gbc.gridx = 1;
         receiptIdInputField = new JTextField(20);
@@ -110,19 +137,26 @@ public class GUIBillingView extends JFrame implements IBillingView {
         panel.add(receiptIdInputField, gbc);
 
         gbc.gridx = 0;
-        gbc.gridy = 4;
+        gbc.gridy = 6;
         panel.add(new JLabel("Or Select Receipt:"), gbc);
         gbc.gridx = 1;
         receiptSelector = new JComboBox<>();
         receiptSelector.setPrototypeDisplayValue("RCT-0000");
         panel.add(receiptSelector, gbc);
 
+        gbc.gridx = 0;
+        gbc.gridy = 7;
+        gbc.gridwidth = 2;
+        loadReceiptButton = new JButton("Load Receipt Details");
+        panel.add(loadReceiptButton, gbc);
+        gbc.gridwidth = 1;
+
         // Cost Breakdown
         gbc.gridx = 0;
-        gbc.gridy = 5;
+        gbc.gridy = 8;
         gbc.gridwidth = 2;
         panel.add(new JLabel("Cost Breakdown:"), gbc);
-        gbc.gridy = 6;
+        gbc.gridy = 9;
         gbc.gridheight = 3;
         costBreakdownArea = new JTextArea(8, 50);
         costBreakdownArea.setEditable(false);
@@ -132,7 +166,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
         // Total Amount
         gbc.gridx = 0;
-        gbc.gridy = 9;
+        gbc.gridy = 12;
         gbc.gridwidth = 1;
         gbc.gridheight = 1;
         panel.add(new JLabel("Total Amount:"), gbc);
@@ -144,7 +178,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
         // Payment Status
         gbc.gridx = 0;
-        gbc.gridy = 10;
+        gbc.gridy = 13;
         panel.add(new JLabel("Payment Status:"), gbc);
         gbc.gridx = 1;
         paymentStatusLabel = new JLabel("PENDING");
@@ -155,7 +189,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
         // Buttons
         JPanel buttonPanel = new JPanel();
         buttonPanel.setBackground(new Color(240, 240, 240));
-        buttonPanel.setLayout(new GridLayout(1, 3, 10, 10));
+        buttonPanel.setLayout(new GridLayout(1, 4, 10, 10));
 
         payButton = new JButton("Process Payment");
         payButton.setBackground(new Color(39, 174, 96));
@@ -174,7 +208,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
         buttonPanel.add(discountButton);
 
         gbc.gridx = 0;
-        gbc.gridy = 11;
+        gbc.gridy = 14;
         gbc.gridwidth = 2;
         panel.add(buttonPanel, gbc);
 
@@ -418,6 +452,42 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
     public JButton getRefreshBillsButton() {
         return refreshBillsButton;
+    }
+
+    public JButton getRefreshJobsButton() {
+        return refreshJobsButton;
+    }
+
+    public JButton getGenerateEstimateButton() {
+        return generateEstimateButton;
+    }
+
+    public JButton getGenerateBillButton() {
+        return generateBillButton;
+    }
+
+    public JButton getLoadReceiptButton() {
+        return loadReceiptButton;
+    }
+
+    public String getSelectedCompletedJobId() {
+        Object selected = completedJobSelector.getSelectedItem();
+        if (selected == null) {
+            return null;
+        }
+        String value = selected.toString();
+        return "No completed jobs found".equals(value) ? null : value;
+    }
+
+    public void setAvailableCompletedJobIds(List<String> jobIds) {
+        completedJobSelector.removeAllItems();
+        if (jobIds == null || jobIds.isEmpty()) {
+            completedJobSelector.addItem("No completed jobs found");
+            return;
+        }
+        for (String jobId : jobIds) {
+            completedJobSelector.addItem(jobId);
+        }
     }
 
     public void setBackAction(Runnable action) {

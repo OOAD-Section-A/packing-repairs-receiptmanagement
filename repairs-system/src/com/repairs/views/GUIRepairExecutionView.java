@@ -12,6 +12,8 @@ import java.util.List;
  */
 public class GUIRepairExecutionView extends JFrame implements IRepairExecutionView {
     private JTextField jobIdField;
+    private JTextField technicianIdField;
+    private JSpinner progressSpinner;
     private JComboBox<String> jobSelector;
     private JLabel jobIdLabel;
     private JLabel statusLabel;
@@ -22,6 +24,8 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
     private JButton backButton;
     private JButton refreshJobsButton;
     private JButton checkStatusButton;
+    private JButton assignTechnicianButton;
+    private JButton updateProgressButton;
     private JButton startButton;
     private JButton pauseButton;
     private JButton completeButton;
@@ -124,6 +128,24 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
         statusLabel.setForeground(new Color(52, 152, 219));
         mainPanel.add(statusLabel, gbc);
 
+        gbc.gridx = 2;
+        mainPanel.add(new JLabel("Technician ID:"), gbc);
+        gbc.gridx = 3;
+        technicianIdField = new JTextField("TECH-001", 12);
+        technicianIdField.setToolTipText("Assign a technician before starting execution.");
+        mainPanel.add(technicianIdField, gbc);
+
+        gbc.gridx = 2;
+        gbc.gridy = 5;
+        assignTechnicianButton = new JButton("Assign Technician");
+        mainPanel.add(assignTechnicianButton, gbc);
+
+        gbc.gridx = 3;
+        SpinnerNumberModel progressModel = new SpinnerNumberModel(0, 0, 100, 5);
+        progressSpinner = new JSpinner(progressModel);
+        progressSpinner.setToolTipText("Set progress percentage and click Update Progress.");
+        mainPanel.add(progressSpinner, gbc);
+
         // Progress Bar
         gbc.gridx = 0;
         gbc.gridy = 5;
@@ -134,6 +156,13 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
         progressBar.setValue(0);
         progressBar.setStringPainted(true);
         mainPanel.add(progressBar, gbc);
+
+        gbc.gridx = 3;
+        gbc.gridy = 7;
+        gbc.gridwidth = 1;
+        updateProgressButton = new JButton("Update Progress");
+        mainPanel.add(updateProgressButton, gbc);
+        gbc.gridwidth = 4;
 
         // Technician
         gbc.gridx = 0;
@@ -286,6 +315,8 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
     @Override
     public void clearDisplay() {
         jobIdField.setText("");
+        technicianIdField.setText("TECH-001");
+        progressSpinner.setValue(0);
         jobIdLabel.setText("-");
         statusLabel.setText("PENDING");
         progressBar.setValue(0);
@@ -324,6 +355,22 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
 
     public JButton getFailButton() {
         return failButton;
+    }
+
+    public JButton getAssignTechnicianButton() {
+        return assignTechnicianButton;
+    }
+
+    public JButton getUpdateProgressButton() {
+        return updateProgressButton;
+    }
+
+    public String getTechnicianIdInput() {
+        return technicianIdField.getText().trim();
+    }
+
+    public int getProgressInput() {
+        return ((Number) progressSpinner.getValue()).intValue();
     }
 
     public String getCurrentJobId() {

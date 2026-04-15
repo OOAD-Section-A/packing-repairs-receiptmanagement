@@ -2,6 +2,7 @@ package com.repairs;
 
 import com.repairs.views.*;
 import com.repairs.controllers.*;
+import com.repairs.enums.RepairStatus;
 import com.repairs.external.*;
 import com.repairs.interfaces.model.*;
 import com.repairs.interfaces.view.*;
@@ -12,6 +13,7 @@ import java.awt.*;
 import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * GUIRepairsApplication - Main GUI application launcher.
@@ -86,6 +88,7 @@ public class GUIRepairsApplication extends JFrame {
 
         refreshRequestSelector();
         refreshJobSelector();
+        refreshCompletedJobSelector();
         refreshReceiptSelector();
     }
 
@@ -95,6 +98,7 @@ public class GUIRepairsApplication extends JFrame {
             requestController.onRepairRequestSubmitted();
             refreshRequestSelector();
             refreshJobSelector();
+            refreshCompletedJobSelector();
             statusBarLabel.setText("Request submission attempted. Check request window status for details.");
         });
 
@@ -122,6 +126,7 @@ public class GUIRepairsApplication extends JFrame {
             if (isValidSelection(jobId)) {
                 executionController.onExecutionStarted(jobId);
                 refreshJobSelector();
+                refreshCompletedJobSelector();
                 statusBarLabel.setText("Started execution flow for job: " + jobId);
             } else {
                 JOptionPane.showMessageDialog(executionView,
@@ -136,6 +141,7 @@ public class GUIRepairsApplication extends JFrame {
             if (isValidSelection(jobId)) {
                 executionController.onExecutionCompleted(jobId);
                 refreshJobSelector();
+                refreshCompletedJobSelector();
                 refreshReceiptSelector();
                 statusBarLabel.setText("Completion requested for job: " + jobId);
             } else {
@@ -153,6 +159,7 @@ public class GUIRepairsApplication extends JFrame {
                 if (reason != null && !reason.isEmpty()) {
                     executionController.onExecutionFailed(jobId, reason);
                     refreshJobSelector();
+                    refreshCompletedJobSelector();
                     statusBarLabel.setText("Failure recorded for job: " + jobId);
                 }
             } else {
@@ -178,6 +185,61 @@ public class GUIRepairsApplication extends JFrame {
                         "Select a job from the dropdown or enter a job ID.",
                         "No Job Selected",
                         JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        executionView.getAssignTechnicianButton().addActionListener(e -> {
+            String jobId = executionView.getCurrentJobId();
+            String technicianId = executionView.getTechnicianIdInput();
+            if (!isValidSelection(jobId)) {
+                JOptionPane.showMessageDialog(executionView,
+                        "Select a job first.",
+                        "No Job Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            if (!isValidSelection(technicianId)) {
+                JOptionPane.showMessageDialog(executionView,
+                        "Enter a technician id.",
+                        "Missing Technician ID",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            executionController.assignTechnician(jobId, technicianId);
+            statusBarLabel.setText("Technician " + technicianId + " assigned to " + jobId);
+        });
+
+        executionView.getUpdateProgressButton().addActionListener(e -> {
+            String jobId = executionView.getCurrentJobId();
+            if (!isValidSelection(jobId)) {
+                JOptionPane.showMessageDialog(executionView,
+                        "Select a job first.",
+                        "No Job Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            executionController.onProgressUpdated(jobId, executionView.getProgressInput());
+            statusBarLabel.setText("Progress updated for job: " + jobId);
+        });
+
+        executionView.getPauseButton().addActionListener(e -> {
+            String jobId = executionView.getCurrentJobId();
+            if (!isValidSelection(jobId)) {
+                JOptionPane.showMessageDialog(executionView,
+                        "Select a job first.",
+                        "No Job Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            JButton pauseButton = executionView.getPauseButton();
+            if ("Pause".equalsIgnoreCase(pauseButton.getText())) {
+                executionController.onExecutionPaused(jobId);
+                pauseButton.setText("Resume");
+                statusBarLabel.setText("Execution paused for job: " + jobId);
+            } else {
+                executionController.onExecutionResumed(jobId);
+                pauseButton.setText("Pause");
+                statusBarLabel.setText("Execution resumed for job: " + jobId);
             }
         });
 
@@ -222,6 +284,65 @@ public class GUIRepairsApplication extends JFrame {
             billingController.displayOutstandingBills();
             refreshReceiptSelector();
             statusBarLabel.setText("Outstanding bills refreshed.");
+        });
+
+        billingView.getRefreshJobsButton().addActionListener(e -> {
+            refreshCompletedJobSelector();
+            statusBarLabel.setText("Completed jobs refreshed for billing.");
+        });
+
+        billingView.getGenerateEstimateButton().addActionListener(e -> {
+            String jobId = billingView.getSelectedCompletedJobId();
+            if (!isValidSelection(jobId)) {
+                JOptionPane.showMessageDialog(billingView,
+                        "Select a completed job first.",
+                        "No Job Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            billingController.onEstimationRequested(jobId);
+            statusBarLabel.setText("Estimate generated for job: " + jobId);
+        });
+
+        billingView.getGenerateBillButton().addActionListener(e -> {
+            String jobId = billingView.getSelectedCompletedJobId();
+            if (!isValidSelection(jobId)) {
+                JOptionPane.showMessageDialog(billingView,
+                        "Select a completed job first.",
+                        "No Job Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            billingController.onBillingRequested(jobId);
+            refreshReceiptSelector();
+            statusBarLabel.setText("Bill generated for job: " + jobId);
+        });
+
+        billingView.getLoadReceiptButton().addActionListener(e -> {
+            String receiptId = billingView.getCurrentReceiptId();
+            if (!isValidSelection(receiptId)) {
+                JOptionPane.showMessageDialog(billingView,
+                        "Select or enter a receipt id first.",
+                        "No Receipt Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            billingController.displayReceipt(receiptId);
+            statusBarLabel.setText("Loaded receipt details for: " + receiptId);
+        });
+
+        billingView.getRefundButton().addActionListener(e -> {
+            String receiptId = billingView.getCurrentReceiptId();
+            if (!isValidSelection(receiptId)) {
+                JOptionPane.showMessageDialog(billingView,
+                        "Select or enter a receipt id first.",
+                        "No Receipt Selected",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            billingController.onRefundRequested(receiptId);
+            refreshReceiptSelector();
+            statusBarLabel.setText("Refund attempted for receipt: " + receiptId);
         });
     }
 
@@ -357,12 +478,14 @@ public class GUIRepairsApplication extends JFrame {
     private void openExecutionView() {
         setVisible(false);
         refreshJobSelector();
+        refreshCompletedJobSelector();
         executionView.setVisible(true);
         statusBarLabel.setText("Execution monitor opened.");
     }
 
     private void openBillingView() {
         setVisible(false);
+        refreshCompletedJobSelector();
         refreshReceiptSelector();
         billingView.setVisible(true);
         billingController.displayOutstandingBills();
@@ -399,12 +522,22 @@ public class GUIRepairsApplication extends JFrame {
     }
 
     private void refreshReceiptSelector() {
-        List<String> receiptIds = billingService.getOutstandingBills().stream()
-                .map(receipt -> receipt.getReceiptId())
+        List<String> receiptIds = repository.findAllRepairJobs().stream()
+            .flatMap(job -> repository.findReceiptsByJobId(job.getJobId()).stream())
+            .map(receipt -> receipt.getReceiptId())
+            .distinct()
                 .sorted(Comparator.naturalOrder())
                 .toList();
         billingView.setAvailableReceiptIds(receiptIds);
     }
+
+        private void refreshCompletedJobSelector() {
+        List<String> completedJobIds = repository.findRepairJobsByStatus(RepairStatus.COMPLETED).stream()
+            .map(job -> job.getJobId())
+            .collect(Collectors.toList());
+        completedJobIds.sort(Comparator.naturalOrder());
+        billingView.setAvailableCompletedJobIds(completedJobIds);
+        }
 
     private void showAboutDialog() {
         String aboutText = "Repairs Management System\n\n" +
