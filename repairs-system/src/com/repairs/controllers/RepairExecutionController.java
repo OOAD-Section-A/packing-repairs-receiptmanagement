@@ -97,7 +97,7 @@ public class RepairExecutionController {
 
             if (paused) {
                 view.displayWarning("Repair paused");
-                view.setPauseButtonEnabled(false);
+                view.setPauseButtonEnabled(true);
 
                 logger.log(jobId,
                           "Execution paused",
@@ -253,6 +253,27 @@ public class RepairExecutionController {
             if (job.getAssignedTechnician() != null) {
                 view.displayTechnician(job.getAssignedTechnician(), 
                                       "Technician: " + job.getAssignedTechnician());
+            }
+
+            switch (job.getStatus()) {
+                case SCHEDULED -> {
+                    view.setStartButtonEnabled(job.getAssignedTechnician() != null);
+                    view.setPauseButtonEnabled(false);
+                    view.setCompleteButtonEnabled(false);
+                    view.setFailButtonEnabled(false);
+                }
+                case IN_PROGRESS -> {
+                    view.setStartButtonEnabled(false);
+                    view.setPauseButtonEnabled(true);
+                    view.setCompleteButtonEnabled(true);
+                    view.setFailButtonEnabled(true);
+                }
+                default -> {
+                    view.setStartButtonEnabled(false);
+                    view.setPauseButtonEnabled(false);
+                    view.setCompleteButtonEnabled(false);
+                    view.setFailButtonEnabled(false);
+                }
             }
 
         } catch (Exception e) {

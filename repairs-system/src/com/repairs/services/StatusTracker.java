@@ -55,6 +55,13 @@ public class StatusTracker implements IStatusTracker {
             }
         }
 
+        // If the status is already current, allow a no-op update
+        if (oldStatus == newStatus) {
+            statusCache.put(jobId, newStatus);
+            lastUpdateCache.put(jobId, LocalDateTime.now());
+            return;
+        }
+
         // Validate state transition
         if (!oldStatus.canTransitionTo(newStatus)) {
             throw new IllegalStateException(
