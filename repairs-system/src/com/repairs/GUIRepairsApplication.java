@@ -2,11 +2,16 @@ package com.repairs;
 
 import com.repairs.views.*;
 import com.repairs.controllers.*;
+import com.repairs.external.*;
+import com.repairs.interfaces.model.*;
 import com.repairs.interfaces.view.*;
 import com.repairs.repositories.*;
 import com.repairs.services.*;
 import javax.swing.*;
 import java.awt.*;
+import java.math.BigDecimal;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * GUIRepairsApplication - Main GUI application launcher.
@@ -20,11 +25,15 @@ public class GUIRepairsApplication extends JFrame {
     private RepairRequestController requestController;
     private RepairExecutionController executionController;
     private BillingController billingController;
+    private IRepairRepository repository;
+    private IBillingService billingService;
+    private JLabel statusBarLabel;
 
     public GUIRepairsApplication() {
         setTitle("Repairs Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(400, 300);
+        setSize(900, 620);
+        setMinimumSize(new Dimension(860, 560));
         setLocationRelativeTo(null);
 
         initializeServices();
@@ -40,15 +49,19 @@ public class GUIRepairsApplication extends JFrame {
         executionView = new GUIRepairExecutionView();
         billingView = new GUIBillingView();
 
-        // Initialize repository and services
-        IRepairRepository repository = new RepairRepository();
-        IRepairLogger logger = new RepairLogger(repository, "./logs");
+        // Initialize repository and services using shared integration adapters.
+        IDatabaseSubsystem databaseSubsystem = new DefaultDatabaseSubsystem();
+        IExceptionHandler exceptionHandler = new DefaultExceptionHandler();
+
+        repository = new RepairRepository(databaseSubsystem, exceptionHandler);
+        IRepairLogger logger = new RepairLogger(repository, "./logs", exceptionHandler);
         IRepairValidator validator = new RepairValidator(repository, logger);
         IRepairScheduler scheduler = new RepairScheduler(repository, logger);
-        IStatusTracker statusTracker = new StatusTracker(repository);
+        IStatusTracker statusTracker = new StatusTracker(repository, exceptionHandler);
         IRepairExecutor executor = new RepairExecutionService(statusTracker, logger, repository);
-        ICostEstimator costEstimator = new CostEstimationService(new InventoryConnector(logger), logger);
-        IBillingService billingService = new BillingService(repository, costEstimator, logger);
+        IInventoryConnector inventoryConnector = new InventoryConnector(logger, databaseSubsystem, exceptionHandler);
+        ICostEstimator costEstimator = new CostEstimationService(inventoryConnector, logger);
+        billingService = new BillingService(repository, costEstimator, logger);
         IFinancialSystemConnector financialConnector = new FinancialSystemConnector(logger);
 
         // Initialize controllers (renamed from Presenters)
@@ -66,60 +79,149 @@ public class GUIRepairsApplication extends JFrame {
 
         // Wire button listeners
         wireControllers();
+
+        requestView.setBackAction(this::showDashboard);
+        executionView.setBackAction(this::showDashboard);
+        billingView.setBackAction(this::showDashboard);
+
+        refreshRequestSelector();
+        refreshJobSelector();
+        refreshReceiptSelector();
     }
 
     private void wireControllers() {
         // Request view button
         requestView.getSubmitButton().addActionListener(e -> {
             requestController.onRepairRequestSubmitted();
+            refreshRequestSelector();
+            refreshJobSelector();
+            statusBarLabel.setText("Request submission attempted. Check request window status for details.");
+        });
+
+        requestView.getRefreshRequestsButton().addActionListener(e -> {
+            refreshRequestSelector();
+            statusBarLabel.setText("Request list refreshed.");
+        });
+
+        requestView.getCheckStatusButton().addActionListener(e -> {
+            String requestId = requestView.getSelectedRequestId();
+            if (isValidSelection(requestId)) {
+                requestController.displayRequestStatus(requestId);
+                statusBarLabel.setText("Status checked for request: " + requestId);
+            } else {
+                JOptionPane.showMessageDialog(requestView,
+                        "Select a request from the dropdown first.",
+                        "No Request Selected",
+                        JOptionPane.WARNING_MESSAGE);
+            }
         });
 
         // Execution view buttons
         executionView.getStartButton().addActionListener(e -> {
-            String jobId = executionView.jobIdLabel.getText();
-            if (!jobId.equals("-")) {
+            String jobId = executionView.getCurrentJobId();
+            if (isValidSelection(jobId)) {
                 executionController.onExecutionStarted(jobId);
+                refreshJobSelector();
+                statusBarLabel.setText("Started execution flow for job: " + jobId);
+            } else {
+                JOptionPane.showMessageDialog(executionView,
+                        "Enter a valid job id before starting.",
+                        "Missing Job ID",
+                        JOptionPane.WARNING_MESSAGE);
             }
         });
 
         executionView.getCompleteButton().addActionListener(e -> {
-            String jobId = executionView.jobIdLabel.getText();
-            if (!jobId.equals("-")) {
+            String jobId = executionView.getCurrentJobId();
+            if (isValidSelection(jobId)) {
                 executionController.onExecutionCompleted(jobId);
+                refreshJobSelector();
+                refreshReceiptSelector();
+                statusBarLabel.setText("Completion requested for job: " + jobId);
+            } else {
+                JOptionPane.showMessageDialog(executionView,
+                        "Enter a valid job id before completing.",
+                        "Missing Job ID",
+                        JOptionPane.WARNING_MESSAGE);
             }
         });
 
         executionView.getFailButton().addActionListener(e -> {
-            String jobId = executionView.jobIdLabel.getText();
-            if (!jobId.equals("-")) {
+            String jobId = executionView.getCurrentJobId();
+            if (isValidSelection(jobId)) {
                 String reason = JOptionPane.showInputDialog(executionView, "Enter failure reason:");
                 if (reason != null && !reason.isEmpty()) {
                     executionController.onExecutionFailed(jobId, reason);
+                    refreshJobSelector();
+                    statusBarLabel.setText("Failure recorded for job: " + jobId);
                 }
+            } else {
+                JOptionPane.showMessageDialog(executionView,
+                        "Enter a valid job id before failing a repair.",
+                        "Missing Job ID",
+                        JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        executionView.getRefreshJobsButton().addActionListener(e -> {
+            refreshJobSelector();
+            statusBarLabel.setText("Job list refreshed.");
+        });
+
+        executionView.getCheckStatusButton().addActionListener(e -> {
+            String jobId = executionView.getCurrentJobId();
+            if (isValidSelection(jobId)) {
+                executionController.displayExecutionProgress(jobId);
+                statusBarLabel.setText("Status checked for job: " + jobId);
+            } else {
+                JOptionPane.showMessageDialog(executionView,
+                        "Select a job from the dropdown or enter a job ID.",
+                        "No Job Selected",
+                        JOptionPane.WARNING_MESSAGE);
             }
         });
 
         // Billing view buttons
         billingView.getPayButton().addActionListener(e -> {
-            String receiptId = billingView.estimateIdLabel.getText();
-            if (!receiptId.equals("-")) {
+            String receiptId = billingView.getCurrentReceiptId();
+            if (isValidSelection(receiptId)) {
                 billingController.onPaymentProcessed(receiptId);
+                refreshReceiptSelector();
+                statusBarLabel.setText("Payment attempted for receipt: " + receiptId);
+            } else {
+                JOptionPane.showMessageDialog(billingView,
+                        "Enter a valid receipt id before processing payment.",
+                        "Missing Receipt ID",
+                        JOptionPane.WARNING_MESSAGE);
             }
         });
 
         billingView.getDiscountButton().addActionListener(e -> {
-            String receiptId = billingView.estimateIdLabel.getText();
-            if (!receiptId.equals("-")) {
+            String receiptId = billingView.getCurrentReceiptId();
+            if (isValidSelection(receiptId)) {
                 String amountStr = JOptionPane.showInputDialog(billingView, "Enter discount amount:");
                 if (amountStr != null && !amountStr.isEmpty()) {
                     try {
-                        java.math.BigDecimal amount = new java.math.BigDecimal(amountStr);
+                        BigDecimal amount = new BigDecimal(amountStr);
                         billingController.onDiscountApplied(receiptId, amount);
+                        refreshReceiptSelector();
+                        statusBarLabel.setText("Discount attempted for receipt: " + receiptId);
                     } catch (NumberFormatException ex) {
                         JOptionPane.showMessageDialog(billingView, "Invalid amount", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
+            } else {
+                JOptionPane.showMessageDialog(billingView,
+                        "Enter a valid receipt id before applying discount.",
+                        "Missing Receipt ID",
+                        JOptionPane.WARNING_MESSAGE);
             }
+        });
+
+        billingView.getRefreshBillsButton().addActionListener(e -> {
+            billingController.displayOutstandingBills();
+            refreshReceiptSelector();
+            statusBarLabel.setText("Outstanding bills refreshed.");
         });
     }
 
@@ -137,15 +239,15 @@ public class GUIRepairsApplication extends JFrame {
         JMenu operationsMenu = new JMenu("Operations");
 
         JMenuItem requestItem = new JMenuItem("New Repair Request");
-        requestItem.addActionListener(e -> requestView.showRepairRequestForm());
+        requestItem.addActionListener(e -> openRequestView());
         operationsMenu.add(requestItem);
 
         JMenuItem executionItem = new JMenuItem("Monitor Execution");
-        executionItem.addActionListener(e -> executionView.setVisible(true));
+        executionItem.addActionListener(e -> openExecutionView());
         operationsMenu.add(executionItem);
 
         JMenuItem billingItem = new JMenuItem("Manage Billing");
-        billingItem.addActionListener(e -> billingView.setVisible(true));
+        billingItem.addActionListener(e -> openBillingView());
         operationsMenu.add(billingItem);
 
         menuBar.add(operationsMenu);
@@ -161,53 +263,147 @@ public class GUIRepairsApplication extends JFrame {
     }
 
     private void createMainPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        panel.setBackground(new Color(240, 240, 240));
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(20, 20, 20, 20);
+        JPanel panel = new JPanel(new BorderLayout(16, 16));
+        panel.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        panel.setBackground(new Color(236, 240, 241));
 
-        // Title
-        JLabel titleLabel = new JLabel("Repairs Management System");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(titleLabel, gbc);
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setOpaque(false);
+        JLabel titleLabel = new JLabel("Repairs Management Dashboard");
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        JLabel descLabel = new JLabel("Pick a module to start work. You can always return here using Back to Dashboard.");
+        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        descLabel.setForeground(new Color(90, 90, 90));
+        headerPanel.add(titleLabel, BorderLayout.NORTH);
+        headerPanel.add(descLabel, BorderLayout.SOUTH);
+        panel.add(headerPanel, BorderLayout.NORTH);
 
-        // Description
-        JLabel descLabel = new JLabel("Select an operation from the menu to begin");
-        descLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-        gbc.gridy = 1;
-        panel.add(descLabel, gbc);
+        JPanel cardsPanel = new JPanel(new GridLayout(1, 3, 14, 14));
+        cardsPanel.setOpaque(false);
+        cardsPanel.add(createModuleCard(
+                "Repair Intake",
+                "Create and validate new repair requests.",
+                "Open Intake",
+                this::openRequestView,
+                new Color(52, 152, 219)));
 
-        // Quick Access Buttons
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(3, 1, 10, 10));
-        buttonPanel.setBackground(new Color(240, 240, 240));
+        cardsPanel.add(createModuleCard(
+                "Execution",
+                "Track job progress and mark completion/failure.",
+                "Open Execution",
+                this::openExecutionView,
+                new Color(46, 204, 113)));
 
-        JButton requestBtn = new JButton("📋 New Repair Request");
-        requestBtn.setFont(new Font("Arial", Font.PLAIN, 12));
-        requestBtn.setPreferredSize(new Dimension(200, 40));
-        requestBtn.addActionListener(e -> requestView.showRepairRequestForm());
-        buttonPanel.add(requestBtn);
+        cardsPanel.add(createModuleCard(
+                "Billing",
+                "Handle estimates, payments, and bill tracking.",
+                "Open Billing",
+                this::openBillingView,
+                new Color(230, 126, 34)));
+        panel.add(cardsPanel, BorderLayout.CENTER);
 
-        JButton executionBtn = new JButton("⚙️  Monitor Execution");
-        executionBtn.setFont(new Font("Arial", Font.PLAIN, 12));
-        executionBtn.setPreferredSize(new Dimension(200, 40));
-        executionBtn.addActionListener(e -> executionView.setVisible(true));
-        buttonPanel.add(executionBtn);
+        statusBarLabel = new JLabel("Ready.");
+        statusBarLabel.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
+        statusBarLabel.setOpaque(true);
+        statusBarLabel.setBackground(Color.WHITE);
+        panel.add(statusBarLabel, BorderLayout.SOUTH);
 
-        JButton billingBtn = new JButton("💳 Manage Billing");
-        billingBtn.setFont(new Font("Arial", Font.PLAIN, 12));
-        billingBtn.setPreferredSize(new Dimension(200, 40));
-        billingBtn.addActionListener(e -> billingView.setVisible(true));
-        buttonPanel.add(billingBtn);
+        setContentPane(panel);
+    }
 
-        gbc.gridy = 2;
-        gbc.insets = new Insets(30, 20, 20, 20);
-        panel.add(buttonPanel, gbc);
+    private JPanel createModuleCard(String title,
+                                    String description,
+                                    String buttonText,
+                                    Runnable action,
+                                    Color accentColor) {
+        JPanel card = new JPanel(new BorderLayout(8, 8));
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(210, 210, 210)),
+                BorderFactory.createEmptyBorder(16, 16, 16, 16)));
+        card.setBackground(Color.WHITE);
 
-        add(panel);
+        JLabel titleLabel = new JLabel(title);
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setForeground(accentColor);
+        card.add(titleLabel, BorderLayout.NORTH);
+
+        JTextArea descriptionArea = new JTextArea(description);
+        descriptionArea.setLineWrap(true);
+        descriptionArea.setWrapStyleWord(true);
+        descriptionArea.setEditable(false);
+        descriptionArea.setOpaque(false);
+        descriptionArea.setFocusable(false);
+        descriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        descriptionArea.setForeground(new Color(70, 70, 70));
+        card.add(descriptionArea, BorderLayout.CENTER);
+
+        JButton openButton = new JButton(buttonText);
+        openButton.setBackground(accentColor);
+        openButton.setForeground(Color.WHITE);
+        openButton.setFocusPainted(false);
+        openButton.addActionListener(e -> action.run());
+        card.add(openButton, BorderLayout.SOUTH);
+
+        return card;
+    }
+
+    private void openRequestView() {
+        setVisible(false);
+        refreshRequestSelector();
+        requestView.showRepairRequestForm();
+        statusBarLabel.setText("Request intake opened.");
+    }
+
+    private void openExecutionView() {
+        setVisible(false);
+        refreshJobSelector();
+        executionView.setVisible(true);
+        statusBarLabel.setText("Execution monitor opened.");
+    }
+
+    private void openBillingView() {
+        setVisible(false);
+        refreshReceiptSelector();
+        billingView.setVisible(true);
+        billingController.displayOutstandingBills();
+        statusBarLabel.setText("Billing workspace opened.");
+    }
+
+    private void showDashboard() {
+        requestView.setVisible(false);
+        executionView.setVisible(false);
+        billingView.setVisible(false);
+        setVisible(true);
+        toFront();
+        requestFocus();
+    }
+
+    private boolean isValidSelection(String id) {
+        return id != null && !id.isBlank() && !"-".equals(id.trim());
+    }
+
+    private void refreshRequestSelector() {
+        List<String> requestIds = repository.findAllRepairRequests().stream()
+                .map(request -> request.getRequestId())
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        requestView.setAvailableRequestIds(requestIds);
+    }
+
+    private void refreshJobSelector() {
+        List<String> jobIds = repository.findAllRepairJobs().stream()
+                .map(job -> job.getJobId())
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        executionView.setAvailableJobIds(jobIds);
+    }
+
+    private void refreshReceiptSelector() {
+        List<String> receiptIds = billingService.getOutstandingBills().stream()
+                .map(receipt -> receipt.getReceiptId())
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        billingView.setAvailableReceiptIds(receiptIds);
     }
 
     private void showAboutDialog() {

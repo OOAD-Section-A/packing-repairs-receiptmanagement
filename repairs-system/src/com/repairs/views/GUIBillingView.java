@@ -15,11 +15,15 @@ import java.util.List;
  * Provides a professional GUI for billing and payment operations.
  */
 public class GUIBillingView extends JFrame implements IBillingView {
+    private JTextField receiptIdInputField;
+    private JComboBox<String> receiptSelector;
     private JLabel estimateIdLabel;
     private JLabel jobIdLabel;
     private JTextArea costBreakdownArea;
     private JLabel totalAmountLabel;
     private JLabel paymentStatusLabel;
+    private JButton backButton;
+    private JButton refreshBillsButton;
     private JButton payButton;
     private JButton refundButton;
     private JButton discountButton;
@@ -28,7 +32,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
     public GUIBillingView() {
         setTitle("Billing & Payment Management");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
         setSize(800, 700);
         setLocationRelativeTo(null);
         setResizable(false);
@@ -38,6 +42,20 @@ public class GUIBillingView extends JFrame implements IBillingView {
     }
 
     private void initializeComponents() {
+        JPanel container = new JPanel(new BorderLayout(10, 10));
+        container.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        JPanel topBar = new JPanel(new BorderLayout(10, 10));
+        topBar.setBackground(new Color(240, 240, 240));
+        backButton = new JButton("Back to Dashboard");
+        backButton.setFocusable(false);
+        JLabel tipLabel = new JLabel("Tip: Enter a receipt ID directly when processing payment.");
+        tipLabel.setFont(new Font("Arial", Font.PLAIN, 11));
+        tipLabel.setForeground(new Color(80, 80, 80));
+        topBar.add(backButton, BorderLayout.WEST);
+        topBar.add(tipLabel, BorderLayout.CENTER);
+        container.add(topBar, BorderLayout.NORTH);
+
         JTabbedPane tabbedPane = new JTabbedPane();
 
         // Estimate Tab
@@ -46,7 +64,8 @@ public class GUIBillingView extends JFrame implements IBillingView {
         // Billing Tab
         tabbedPane.addTab("Bills & Receipts", createBillingPanel());
 
-        add(tabbedPane);
+        container.add(tabbedPane, BorderLayout.CENTER);
+        add(container);
     }
 
     private JPanel createEstimatePanel() {
@@ -82,12 +101,28 @@ public class GUIBillingView extends JFrame implements IBillingView {
         jobIdLabel = new JLabel("-");
         panel.add(jobIdLabel, gbc);
 
-        // Cost Breakdown
         gbc.gridx = 0;
         gbc.gridy = 3;
+        panel.add(new JLabel("Receipt ID Input:"), gbc);
+        gbc.gridx = 1;
+        receiptIdInputField = new JTextField(20);
+        receiptIdInputField.setToolTipText("Use this field to process payment or discount for a known receipt id.");
+        panel.add(receiptIdInputField, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        panel.add(new JLabel("Or Select Receipt:"), gbc);
+        gbc.gridx = 1;
+        receiptSelector = new JComboBox<>();
+        receiptSelector.setPrototypeDisplayValue("RCT-0000");
+        panel.add(receiptSelector, gbc);
+
+        // Cost Breakdown
+        gbc.gridx = 0;
+        gbc.gridy = 5;
         gbc.gridwidth = 2;
         panel.add(new JLabel("Cost Breakdown:"), gbc);
-        gbc.gridy = 4;
+        gbc.gridy = 6;
         gbc.gridheight = 3;
         costBreakdownArea = new JTextArea(8, 50);
         costBreakdownArea.setEditable(false);
@@ -97,7 +132,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
         // Total Amount
         gbc.gridx = 0;
-        gbc.gridy = 7;
+        gbc.gridy = 9;
         gbc.gridwidth = 1;
         gbc.gridheight = 1;
         panel.add(new JLabel("Total Amount:"), gbc);
@@ -109,7 +144,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
         // Payment Status
         gbc.gridx = 0;
-        gbc.gridy = 8;
+        gbc.gridy = 10;
         panel.add(new JLabel("Payment Status:"), gbc);
         gbc.gridx = 1;
         paymentStatusLabel = new JLabel("PENDING");
@@ -139,7 +174,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
         buttonPanel.add(discountButton);
 
         gbc.gridx = 0;
-        gbc.gridy = 9;
+        gbc.gridy = 11;
         gbc.gridwidth = 2;
         panel.add(buttonPanel, gbc);
 
@@ -155,7 +190,13 @@ public class GUIBillingView extends JFrame implements IBillingView {
         // Title
         JLabel titleLabel = new JLabel("Outstanding & Overdue Bills");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JPanel tableHeader = new JPanel(new BorderLayout(8, 8));
+        tableHeader.setBackground(new Color(240, 240, 240));
+        tableHeader.add(titleLabel, BorderLayout.WEST);
+        refreshBillsButton = new JButton("Refresh Outstanding");
+        tableHeader.add(refreshBillsButton, BorderLayout.EAST);
+        panel.add(tableHeader, BorderLayout.NORTH);
 
         // Table
         String[] columnNames = {"Receipt ID", "Amount", "Status", "Date"};
@@ -182,6 +223,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
     @Override
     public void displayReceipt(Receipt receipt) {
         estimateIdLabel.setText(receipt.getReceiptId());
+        receiptIdInputField.setText(receipt.getReceiptId());
         jobIdLabel.setText(receipt.getRepairJob().getJobId());
         totalAmountLabel.setText("$" + receipt.getFinalAmount());
         paymentStatusLabel.setText(receipt.getPaymentStatus().toString());
@@ -259,6 +301,11 @@ public class GUIBillingView extends JFrame implements IBillingView {
     }
 
     @Override
+    public void displayWarning(String message) {
+        JOptionPane.showMessageDialog(this, message, "Warning", JOptionPane.WARNING_MESSAGE);
+    }
+
+    @Override
     public void displaySuccess(String message) {
         JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -300,6 +347,7 @@ public class GUIBillingView extends JFrame implements IBillingView {
     @Override
     public void clearDisplay() {
         estimateIdLabel.setText("-");
+        receiptIdInputField.setText("");
         jobIdLabel.setText("-");
         costBreakdownArea.setText("");
         totalAmountLabel.setText("$0.00");
@@ -340,5 +388,39 @@ public class GUIBillingView extends JFrame implements IBillingView {
 
     public JButton getDiscountButton() {
         return discountButton;
+    }
+
+    public String getCurrentReceiptId() {
+        String typedId = receiptIdInputField.getText().trim();
+        if (!typedId.isEmpty()) {
+            return typedId;
+        }
+        Object selected = receiptSelector.getSelectedItem();
+        if (selected != null) {
+            String selectedId = selected.toString();
+            if (!"No receipts found".equals(selectedId)) {
+                return selectedId;
+            }
+        }
+        return estimateIdLabel.getText();
+    }
+
+    public void setAvailableReceiptIds(List<String> receiptIds) {
+        receiptSelector.removeAllItems();
+        if (receiptIds == null || receiptIds.isEmpty()) {
+            receiptSelector.addItem("No receipts found");
+            return;
+        }
+        for (String receiptId : receiptIds) {
+            receiptSelector.addItem(receiptId);
+        }
+    }
+
+    public JButton getRefreshBillsButton() {
+        return refreshBillsButton;
+    }
+
+    public void setBackAction(Runnable action) {
+        backButton.addActionListener(e -> action.run());
     }
 } 
