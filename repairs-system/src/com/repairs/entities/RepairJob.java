@@ -137,6 +137,26 @@ public class RepairJob {
     }
 
     /**
+     * Pause the repair job
+     */
+    public void pauseRepair() {
+        if (status != RepairStatus.IN_PROGRESS) {
+            throw new IllegalStateException("Only in-progress jobs can be paused");
+        }
+        this.status = RepairStatus.PAUSED;
+    }
+
+    /**
+     * Resume the repair job
+     */
+    public void resumeRepair() {
+        if (status != RepairStatus.PAUSED) {
+            throw new IllegalStateException("Only paused jobs can be resumed");
+        }
+        this.status = RepairStatus.IN_PROGRESS;
+    }
+
+    /**
      * Mark job as failed
      */
     public void failRepair(String reason) {

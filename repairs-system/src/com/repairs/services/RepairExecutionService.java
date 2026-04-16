@@ -99,10 +99,9 @@ public class RepairExecutionService implements IRepairExecutor {
         }
 
         try {
-            // Note: We don't have a PAUSED status in the enum
-            // So we store pause reason and keep status as IN_PROGRESS
-            // This could be extended with additional pause state
-            
+            job.pauseRepair();
+            repository.updateRepairJob(job);
+            statusTracker.updateStatus(jobId, RepairStatus.PAUSED);
             pausedReasons.put(jobId, "Repair paused - waiting for parts or other reason");
 
             logger.log(jobId,
@@ -130,7 +129,20 @@ public class RepairExecutionService implements IRepairExecutor {
             return false; // Not paused
         }
 
+        Optional<RepairJob> jobOptional = repository.findRepairJobById(jobId);
+        if (jobOptional.isEmpty()) {
+            return false;
+        }
+
+        RepairJob job = jobOptional.get();
+        if (job.getStatus() != RepairStatus.PAUSED) {
+            return false; // Cannot resume a job that is not paused
+        }
+
         try {
+            job.resumeRepair();
+            repository.updateRepairJob(job);
+            statusTracker.updateStatus(jobId, RepairStatus.IN_PROGRESS);
             pausedReasons.remove(jobId);
 
             logger.log(jobId,

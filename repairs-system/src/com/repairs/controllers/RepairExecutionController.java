@@ -97,6 +97,7 @@ public class RepairExecutionController {
 
             if (paused) {
                 view.displayWarning("Repair paused");
+                view.showExecutionStatus(com.repairs.enums.RepairStatus.PAUSED);
                 view.setPauseButtonEnabled(true);
 
                 logger.log(jobId,
@@ -121,6 +122,7 @@ public class RepairExecutionController {
 
             if (resumed) {
                 view.displaySuccess("Repair resumed");
+                view.showExecutionStatus(com.repairs.enums.RepairStatus.IN_PROGRESS);
                 view.setPauseButtonEnabled(true);
 
                 logger.log(jobId,
@@ -263,6 +265,12 @@ public class RepairExecutionController {
                     view.setFailButtonEnabled(false);
                 }
                 case IN_PROGRESS -> {
+                    view.setStartButtonEnabled(false);
+                    view.setPauseButtonEnabled(true);
+                    view.setCompleteButtonEnabled(true);
+                    view.setFailButtonEnabled(true);
+                }
+                case PAUSED -> {
                     view.setStartButtonEnabled(false);
                     view.setPauseButtonEnabled(true);
                     view.setCompleteButtonEnabled(true);

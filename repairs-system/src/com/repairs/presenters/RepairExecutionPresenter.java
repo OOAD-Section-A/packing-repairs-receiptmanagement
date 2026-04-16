@@ -97,7 +97,8 @@ public class RepairExecutionPresenter {
 
             if (paused) {
                 view.displayWarning("Repair paused");
-                view.setPauseButtonEnabled(false);
+                view.showExecutionStatus(com.repairs.enums.RepairStatus.PAUSED);
+                view.setPauseButtonEnabled(true);
 
                 logger.log(jobId,
                           "Execution paused",
@@ -121,6 +122,7 @@ public class RepairExecutionPresenter {
 
             if (resumed) {
                 view.displaySuccess("Repair resumed");
+                view.showExecutionStatus(com.repairs.enums.RepairStatus.IN_PROGRESS);
                 view.setPauseButtonEnabled(true);
 
                 logger.log(jobId,

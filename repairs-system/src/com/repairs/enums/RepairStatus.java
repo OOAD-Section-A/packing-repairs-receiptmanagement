@@ -12,6 +12,7 @@ public enum RepairStatus {
     VALIDATED("Request validated and eligible"),
     SCHEDULED("Repair scheduled for execution"),
     IN_PROGRESS("Repair currently being executed"),
+    PAUSED("Repair is temporarily paused"),
     COMPLETED("Repair successfully completed"),
     FAILED("Repair failed"),
     CANCELLED("Repair cancelled by user or system");
@@ -38,7 +39,9 @@ public enum RepairStatus {
             case SCHEDULED:
                 return targetStatus == IN_PROGRESS || targetStatus == CANCELLED;
             case IN_PROGRESS:
-                return targetStatus == COMPLETED || targetStatus == FAILED || targetStatus == CANCELLED;
+                return targetStatus == PAUSED || targetStatus == COMPLETED || targetStatus == FAILED || targetStatus == CANCELLED;
+            case PAUSED:
+                return targetStatus == IN_PROGRESS || targetStatus == FAILED || targetStatus == CANCELLED;
             case COMPLETED:
             case FAILED:
             case CANCELLED:
