@@ -1,12 +1,15 @@
 package com.repairs.entities;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
  * RepairLog entity - represents an audit log entry for a repair operation.
  */
-public class RepairLog {
+public class RepairLog implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String logId;
     private final RepairJob repairJob;
     private final String referenceId;

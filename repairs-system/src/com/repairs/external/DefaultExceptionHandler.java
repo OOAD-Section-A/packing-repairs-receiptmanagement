@@ -1,18 +1,13 @@
 package com.repairs.external;
 
-import com.repairs.interfaces.model.IExceptionHandler;
-import java.time.LocalDateTime;
+import com.repairs.subsystems.exceptionhandling.IRepairExceptionDispatcher;
+import com.repairs.subsystems.exceptionhandling.RepairExceptionDispatcherFactory;
 
 /**
- * DefaultExceptionHandler - fallback handler when no external exception subsystem is provided.
+ * DefaultExceptionHandler - compatibility adapter for the shared exception subsystem.
  */
-public class DefaultExceptionHandler implements IExceptionHandler {
-    @Override
-    public void handleException(Exception exception, String context) {
-        String message = String.format("[%s] %s: %s",
-                LocalDateTime.now(),
-                context,
-                exception != null ? exception.getMessage() : "Unknown exception");
-        System.err.println(message);
+public class DefaultExceptionHandler extends RepairExceptionDispatcherFactory {
+    public DefaultExceptionHandler() {
+        super(IRepairExceptionDispatcher.getDefaultLogPath());
     }
 }

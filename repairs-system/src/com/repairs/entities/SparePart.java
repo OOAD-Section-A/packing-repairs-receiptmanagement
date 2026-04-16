@@ -1,12 +1,15 @@
 package com.repairs.entities;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
  * SparePart entity - represents a spare part with quantity and pricing.
  */
-public class SparePart {
+public class SparePart implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String partId;
     private final String name;
     private Integer quantity;

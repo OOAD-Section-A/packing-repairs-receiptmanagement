@@ -6,11 +6,11 @@ import com.repairs.entities.RepairJob;
 import com.repairs.entities.RepairLog;
 import com.repairs.entities.RepairRequest;
 import com.repairs.enums.RepairStatus;
-import com.repairs.external.DefaultDatabaseSubsystem;
-import com.repairs.external.DefaultExceptionHandler;
 import com.repairs.interfaces.model.IDatabaseSubsystem;
 import com.repairs.interfaces.model.IExceptionHandler;
 import com.repairs.interfaces.model.IRepairRepository;
+import com.repairs.subsystems.database.RepairFlatFileDatabaseAdapter;
+import com.repairs.subsystems.exceptionhandling.IRepairExceptionDispatcher;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +26,12 @@ public class RepairRepository implements IRepairRepository {
     private final IExceptionHandler exceptionHandler;
 
     public RepairRepository() {
-        this(new DefaultDatabaseSubsystem(), new DefaultExceptionHandler());
+        this(RepairFlatFileDatabaseAdapter.createDefaultSubsystem(), IRepairExceptionDispatcher.createDefaultHandler());
     }
 
     public RepairRepository(IDatabaseSubsystem databaseSubsystem, IExceptionHandler exceptionHandler) {
         this.databaseSubsystem = Objects.requireNonNull(databaseSubsystem, "Database subsystem cannot be null");
-        this.exceptionHandler = exceptionHandler != null ? exceptionHandler : new DefaultExceptionHandler();
+        this.exceptionHandler = exceptionHandler != null ? exceptionHandler : IRepairExceptionDispatcher.createDefaultHandler();
     }
 
     @Override

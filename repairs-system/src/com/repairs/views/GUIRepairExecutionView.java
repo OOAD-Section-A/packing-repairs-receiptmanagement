@@ -6,7 +6,6 @@ import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
 import java.util.List;
-import javax.swing.*;
 
 /**
  * GUIRepairExecutionView - Swing GUI implementation of IRepairExecutionView.
@@ -328,19 +327,12 @@ public class GUIRepairExecutionView extends JFrame implements IRepairExecutionVi
     public void showExecutionStatus(RepairStatus status) {
         statusLabel.setText(status.toString());
         Color statusColor = switch (status) {
-<<<<<<< HEAD
-            case IN_PROGRESS -> ACCENT_BLUE;
-            case COMPLETED -> ACCENT_GREEN;
+            case REQUESTED, VALIDATED, SCHEDULED -> ACCENT_BLUE;
+            case IN_PROGRESS -> ACCENT_GREEN;
+            case PAUSED -> ACCENT_ORANGE;
             case FAILED -> ACCENT_RED;
-            case SCHEDULED -> ACCENT_ORANGE;
-            default -> TEXT_SECONDARY;
-=======
-            case IN_PROGRESS -> new Color(52, 152, 219);
-            case PAUSED -> new Color(230, 126, 34);
-            case COMPLETED -> new Color(39, 174, 96);
-            case FAILED -> new Color(231, 76, 60);
-            default -> Color.BLACK;
->>>>>>> d5571d2 (some code-level changes)
+            case CANCELLED -> TEXT_SECONDARY;
+            case COMPLETED -> TEXT_PRIMARY;
         };
         statusLabel.setForeground(statusColor);
     }

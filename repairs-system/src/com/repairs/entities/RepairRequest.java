@@ -2,6 +2,7 @@ package com.repairs.entities;
 
 import com.repairs.enums.RepairStatus;
 import com.repairs.enums.RepairType;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -14,7 +15,9 @@ import java.util.Objects;
  * - Track status transitions
  * - Validate status changes
  */
-public class RepairRequest {
+public class RepairRequest implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String requestId;
     private final String customerId;
     private final RepairType repairType;

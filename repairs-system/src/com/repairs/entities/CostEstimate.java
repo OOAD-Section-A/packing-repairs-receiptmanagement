@@ -1,6 +1,7 @@
 package com.repairs.entities;
 
 import com.repairs.enums.BillingStatus;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -9,7 +10,9 @@ import java.util.Objects;
  * CostEstimate entity - represents the cost breakdown for a repair job.
  * Immutable after creation to maintain data integrity.
  */
-public class CostEstimate {
+public class CostEstimate implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String estimateId;
     private final RepairJob repairJob;
     private final BigDecimal laborCost;

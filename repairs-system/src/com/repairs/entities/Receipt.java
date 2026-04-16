@@ -1,6 +1,7 @@
 package com.repairs.entities;
 
 import com.repairs.enums.PaymentStatus;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -8,7 +9,9 @@ import java.util.Objects;
 /**
  * Receipt entity - represents the final invoice/receipt for a repair job.
  */
-public class Receipt {
+public class Receipt implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String receiptId;
     private final RepairJob repairJob;
     private final CostEstimate costEstimate;

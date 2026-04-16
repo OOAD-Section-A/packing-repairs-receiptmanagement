@@ -8,6 +8,8 @@ import com.repairs.interfaces.model.*;
 import com.repairs.interfaces.view.*;
 import com.repairs.repositories.*;
 import com.repairs.services.*;
+import com.repairs.subsystems.database.RepairFlatFileDatabaseAdapter;
+import com.repairs.subsystems.exceptionhandling.IRepairExceptionDispatcher;
 import javax.swing.*;
 import java.awt.*;
 import java.math.BigDecimal;
@@ -52,8 +54,8 @@ public class GUIRepairsApplication extends JFrame {
         billingView = new GUIBillingView();
 
         // Initialize repository and services using shared integration adapters.
-        IDatabaseSubsystem databaseSubsystem = new DefaultDatabaseSubsystem();
-        IExceptionHandler exceptionHandler = new DefaultExceptionHandler();
+        IDatabaseSubsystem databaseSubsystem = RepairFlatFileDatabaseAdapter.createDefaultSubsystem();
+        IExceptionHandler exceptionHandler = IRepairExceptionDispatcher.createDefaultHandler();
 
         repository = new RepairRepository(databaseSubsystem, exceptionHandler);
         IRepairLogger logger = new RepairLogger(repository, "./logs", exceptionHandler);

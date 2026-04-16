@@ -1,6 +1,7 @@
 package com.repairs.entities;
 
 import com.repairs.enums.RepairStatus;
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -9,7 +10,9 @@ import java.util.*;
  * RepairJob entity - represents the execution plan for a RepairRequest.
  * Links request to technician, parts, and execution timeline.
  */
-public class RepairJob {
+public class RepairJob implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private final String jobId;
     private final RepairRequest repairRequest;
     private final LocalDateTime createdDate;
