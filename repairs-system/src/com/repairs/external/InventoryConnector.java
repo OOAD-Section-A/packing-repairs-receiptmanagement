@@ -69,10 +69,23 @@ public class InventoryConnector implements IInventoryConnector {
             }
 
             SparePart existing = partDetails.get();
+            int remainingQuantity = existing.getQuantity() - quantity;
+            if (remainingQuantity < 0) {
+                logger.log(partId, "Insufficient stock for reservation: " + quantity, "WARNING", "RESERVATION");
+                return false;
+            }
+
+            if (remainingQuantity == 0) {
+                partInventoryCache.put(partId, 0);
+                cacheTimestamps.put(partId, System.currentTimeMillis());
+                logger.log(partId, "Part reserved: " + quantity, "INFO", "RESERVATION");
+                return true;
+            }
+
             SparePart updated = new SparePart(
                     existing.getPartId(),
                     existing.getName(),
-                    existing.getQuantity() - quantity,
+                    remainingQuantity,
                     existing.getUnitPrice(),
                     existing.getCategory());
 
