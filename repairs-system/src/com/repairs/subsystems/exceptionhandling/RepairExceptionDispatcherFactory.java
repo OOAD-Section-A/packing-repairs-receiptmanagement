@@ -1,38 +1,20 @@
-package com.scm.repair.integration.exceptions;
+package com.repairs.subsystems.exceptionhandling;
 
 /**
- * Factory that decides which {@link IRepairExceptionDispatcher} to use.
- *
- * <p><b>Design Pattern – Factory Method (Creational):</b>
- * The selection between the real SCM exception adapter and the console
- * fallback is centralised here.</p>
- *
- * <p><b>Fallback strategy:</b>
- * We try to load the SCM exception handler class via reflection.
- * If it is not on the classpath, we return the console logger instead.</p>
+ * Factory that selects the SCM-backed exception adapter when the external JARs
+ * are present and otherwise falls back to structured console logging.
  */
-public class RepairExceptionDispatcherFactory {
+public final class RepairExceptionDispatcherFactory {
 
-    /**
-     * Creates the most capable available {@link IRepairExceptionDispatcher}.
-     *
-     * @return a {@link FallbackConsoleLogger} if the SCM exception handler
-     *         JAR is available, or a {@link RepairFallbackConsoleLogger} otherwise
-     */
+    private RepairExceptionDispatcherFactory() {
+    }
+
     public static IRepairExceptionDispatcher create() {
-
         try {
-            // SAME external dependency check (shared exception system)
-            Class.forName("com.scm.exceptions.SCMExceptionHandler");
-
-            System.out.println("[RepairExceptionDispatcherFactory] SCM Exception Handler found — using RepairExceptionAdapter.");
-            return new FallbackConsoleLogger();
-
-        } catch (ClassNotFoundException e) {
-
-            System.out.println("[RepairExceptionDispatcherFactory] SCM Exception Handler NOT found on classpath.");
+            return new RepairSCMExceptionAdapter();
+        } catch (RuntimeException ex) {
+            System.out.println("[RepairExceptionDispatcherFactory] SCM exception handler not available.");
             System.out.println("[RepairExceptionDispatcherFactory] Falling back to RepairFallbackConsoleLogger.");
-
             return new RepairFallbackConsoleLogger();
         }
     }

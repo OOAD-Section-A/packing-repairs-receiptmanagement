@@ -1,13 +1,25 @@
 package com.repairs.external;
 
+import com.repairs.interfaces.model.IExceptionHandler;
 import com.repairs.subsystems.exceptionhandling.IRepairExceptionDispatcher;
-import com.repairs.subsystems.exceptionhandling.RepairExceptionDispatcherFactory;
 
 /**
- * DefaultExceptionHandler - compatibility adapter for the shared exception subsystem.
+ * Compatibility adapter used by the repair codebase anywhere an
+ * {@link IExceptionHandler} is required.
  */
-public class DefaultExceptionHandler extends RepairExceptionDispatcherFactory {
+public class DefaultExceptionHandler implements IExceptionHandler {
+    private final IRepairExceptionDispatcher dispatcher;
+
     public DefaultExceptionHandler() {
-        super(IRepairExceptionDispatcher.getDefaultLogPath());
+        this.dispatcher = IRepairExceptionDispatcher.createDefaultHandler();
+    }
+
+    @Override
+    public void handleException(Exception exception, String context) {
+        dispatcher.handleException(exception, context);
+    }
+
+    public IRepairExceptionDispatcher getDispatcher() {
+        return dispatcher;
     }
 }

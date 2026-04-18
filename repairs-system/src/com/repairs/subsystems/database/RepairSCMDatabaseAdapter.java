@@ -1,66 +1,20 @@
-package com.scm.repair.integration.database;
+package com.repairs.subsystems.database;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.jackfruit.scm.database.facade.SupplyChainDatabaseFacade;
-import com.scm.repair.mvc.model.RepairJob;
+import com.repairs.interfaces.model.IDatabaseSubsystem;
 
 /**
- * Adapter connecting Repair subsystem to SCM database.
- *
- * <b>Design Pattern: Adapter</b>
+ * Placeholder SCM adapter. Until the external database JAR is added and mapped,
+ * it behaves like the fallback database while keeping the integration seam in
+ * place.
  */
-public class RepairSCMDatabaseAdapter implements IRepairDatabaseLayer {
-
-    private final SupplyChainDatabaseFacade facade;
+public class RepairSCMDatabaseAdapter extends RepairFlatFileDatabaseAdapter {
 
     public RepairSCMDatabaseAdapter() {
-        this.facade = new SupplyChainDatabaseFacade();
-        System.out.println("[RepairSCMDatabaseAdapter] Connected to SCM DB.");
+        System.out.println("[RepairSCMDatabaseAdapter] External SCM DB module detected.");
+        System.out.println("[RepairSCMDatabaseAdapter] Using fallback in-memory mapping until facade wiring is added.");
     }
 
-    @Override
-    public List<RepairJob> loadRepairJobs() {
-
-        List<RepairJob> result = new ArrayList<>();
-
-        try {
-            // 👉 Adjust based on actual DB module
-            // Example:
-            // facade.repairs().listRepairJobs()
-
-            System.out.println("[RepairSCMDatabaseAdapter] Loading jobs from DB...");
-
-        } catch (Exception e) {
-            System.err.println("[RepairSCMDatabaseAdapter] load failed: " + e.getMessage());
-        }
-
-        return result;
-    }
-
-    @Override
-    public void saveRepairJob(RepairJob job) {
-        try {
-            // facade.repairs().createRepairJob(...)
-            System.out.println("[RepairSCMDatabaseAdapter] Saved job: " + job.getJobId());
-        } catch (Exception e) {
-            System.err.println("[RepairSCMDatabaseAdapter] save failed: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public void updateRepairJob(RepairJob job) {
-        try {
-            // facade.repairs().updateRepairStatus(...)
-            System.out.println("[RepairSCMDatabaseAdapter] Updated job: " + job.getJobId());
-        } catch (Exception e) {
-            System.err.println("[RepairSCMDatabaseAdapter] update failed: " + e.getMessage());
-        }
-    }
-
-    @Override
-    public void clearAll() {
-        System.out.println("[RepairSCMDatabaseAdapter] clearAll = no-op (DB mode)");
+    public static IDatabaseSubsystem createDefaultSubsystem() {
+        return new RepairSCMDatabaseAdapter();
     }
 }

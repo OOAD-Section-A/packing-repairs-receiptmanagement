@@ -1,43 +1,60 @@
-package com.scm.repair.integration.exceptions;
+package com.repairs.subsystems.exceptionhandling;
+
+import com.repairs.interfaces.model.IExceptionHandler;
 
 /**
- * Abstraction for exception dispatching in the Repair subsystem.
+ * Exception-dispatch contract for the Packing/Repairs/Receipt subsystem.
  *
- * <p><b>Design Pattern – Adapter (Structural):</b> This interface is the
- * "target" that the Repair subsystem codes against. Concrete adapters
- * bridge either the real SCM Exception Handler subsystem or a simple
- * console-based fallback.</p>
- *
- * <p><b>SOLID – Dependency Inversion:</b> Controllers and workers depend
- * on this interface, never on a concrete exception handler class.</p>
- *
- * <p><b>SOLID – Interface Segregation:</b> Only repair-relevant exception
- * methods are declared — the full SCM exception surface is not exposed
- * unnecessarily.</p>
- *
- * <p>Relevant SCM Exception IDs for the Repair subsystem:</p>
- * <ul>
- *   <li>9   — INVALID_REPAIR_REQUEST</li>
- *   <li>209 — REPAIR_EXECUTION_FAILED</li>
- *   <li>210 — REPAIR_DELAY_DETECTED</li>
- * </ul>
+ * <p>The shared SCM exception JAR exposes strongly typed methods such as
+ * {@code onInvalidRepairRequest(...)} on
+ * {@code PackingRepairsReceiptSubsystem.INSTANCE}. This interface keeps the
+ * repair codebase decoupled from that external dependency while still exposing
+ * the exact exception methods this subsystem is allowed to raise.</p>
  */
-public interface IRepairExceptionDispatcher {
+public interface IRepairExceptionDispatcher extends IExceptionHandler {
 
-    /**
-     * Dispatches an exception event.
-     *
-     * @param exceptionId  the numeric ID from the SCM master register
-     * @param severity     "MINOR", "MAJOR", or "WARNING"
-     * @param subsystem    subsystem name (always "Repair" here)
-     * @param detail       human-readable context about the failure
-     */
+    String SUBSYSTEM_NAME = "PackingRepairsReceiptSubsystem";
+    String SUBSYSTEM_LABEL = "Packing, Repairs, Receipt Management";
+
     void dispatch(int exceptionId, String severity, String subsystem, String detail);
 
-    /**
-     * Dispatches an unregistered exception (ID 0).
-     *
-     * @param detail context about the unregistered exception
-     */
     void dispatchUnregistered(String detail);
+
+    void onInvalidRepairRequest(String repairId, String itemId);
+
+    void onSparePartNotAvailable(String partId);
+
+    void onInventoryReservationFailed(String itemId, String operation);
+
+    void onItemNotAvailableForPacking(String itemId, String orderId);
+
+    void onWarrantyValidationFailed(String productId, String warrantyId);
+
+    void onRepairExecutionFailed(String repairId, String reason);
+
+    void onRepairDelayDetected(String repairId, long elapsedMs, long slaMs);
+
+    void onPackageCreationFailed(String orderId);
+
+    void onReceiptStorageFailed(String receiptId);
+
+    void onReceiptGenerationFailed(String orderId);
+
+    void onPaymentProcessingFailed(String orderId, String reason);
+
+    void onCostCalculationFailed(String orderId, String reason);
+
+    @Override
+    default void handleException(Exception exception, String context) {
+        String message = exception == null ? "No exception details available." : exception.getMessage();
+        dispatchUnregistered(context + " :: " + message);
+    }
+
+    static IRepairExceptionDispatcher createDefaultHandler() {
+        return RepairExceptionDispatcherFactory.create();
+    }
+
+    static String getDefaultLogPath() {
+        return "./logs/repair-exceptions.log";
+    }
 }

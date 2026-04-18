@@ -1,15 +1,9 @@
-package com.scm.repair.integration.database;
+package com.repairs.subsystems.database;
 
-import java.util.List;
-import com.scm.repair.mvc.model.RepairJob;
+import com.repairs.interfaces.model.IDatabaseSubsystem;
 
-public interface IRepairDatabaseLayer {
-
-    List<RepairJob> loadRepairJobs();
-
-    void saveRepairJob(RepairJob job);
-
-    void updateRepairJob(RepairJob job);
-
-    void clearAll();
+/**
+ * Compatibility alias for the repair database integration layer.
+ */
+public interface IRepairDatabaseLayer extends IDatabaseSubsystem {
 }
