@@ -38,18 +38,40 @@ The generated class diagram is available at:
 
 ## Run
 
-Compile with `javac`:
+From the project folder:
+
+```powershell
+cd receipt-management
+```
+
+Compile with Maven:
+
+```powershell
+mvn compile
+```
+
+Run the console demo:
+
+```powershell
+java -cp target\classes com.receiptmanagement.Main
+```
+
+Run the alternate CLI demo:
+
+```powershell
+java -cp target\classes com.receiptmanagement.CliDemo
+```
+
+Run the Swing GUI:
+
+```powershell
+java -cp target\classes com.receiptmanagement.ui.ReceiptManagementUI
+```
+
+You can also compile without Maven:
 
 ```powershell
 $files = Get-ChildItem -Recurse -Filter *.java | ForEach-Object { $_.FullName }
 javac -d out $files
 java -cp out com.receiptmanagement.Main
 ```
-
-You can also use Maven if your environment already has the standard compiler plugin available:
-
-```powershell
-mvn compile
-java -cp target/classes com.receiptmanagement.Main
-```
-
