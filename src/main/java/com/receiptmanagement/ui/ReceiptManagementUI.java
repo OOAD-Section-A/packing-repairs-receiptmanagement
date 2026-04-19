@@ -1,522 +1,502 @@
 package com.receiptmanagement.ui;
 
-import com.receiptmanagement.application.EnhancedReceiptGenerationService;
-import com.receiptmanagement.application.Logger;
-import com.receiptmanagement.application.PaymentValidation;
-import com.receiptmanagement.application.ReceiptFormatter;
-import com.receiptmanagement.application.ReceiptGenerationService;
-import com.receiptmanagement.domain.model.CustomerInformation;
-import com.receiptmanagement.domain.model.Invoice;
-import com.receiptmanagement.domain.model.PaymentDetails;
-import com.receiptmanagement.domain.model.PurchaseOrder;
-import com.receiptmanagement.domain.model.ReceiptDocument;
+import com.receiptmanagement.application.*;
+import com.receiptmanagement.domain.model.*;
+import com.receiptmanagement.infrastructure.accounting.QuickBooksIntegration;
 import com.receiptmanagement.infrastructure.categorization.CategorizationService;
+import com.receiptmanagement.infrastructure.cloudstorage.InMemoryCloudStorage;
 import com.receiptmanagement.infrastructure.database.InMemoryDatabase;
 import com.receiptmanagement.infrastructure.exception.ConsoleExceptionHandler;
 import com.receiptmanagement.infrastructure.formatter.PlainTextReceiptFormatter;
 import com.receiptmanagement.infrastructure.logging.DatabaseLogger;
 import com.receiptmanagement.infrastructure.matching.ThreeWayMatchingService;
+import com.receiptmanagement.infrastructure.notification.ConsoleNotificationSystem;
+import com.receiptmanagement.infrastructure.ocr.MockOCRService;
 import com.receiptmanagement.infrastructure.reimbursement.ReimbursementService;
 import com.receiptmanagement.infrastructure.validation.StandardPaymentValidation;
-import com.receiptmanagement.port.DatabaseInterface;
-import com.receiptmanagement.port.ExceptionHandlerInterface;
+
+import com.receiptmanagement.port.*;
 
 import javax.swing.*;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.Optional;
 
 public class ReceiptManagementUI extends JFrame {
-    private final ReceiptGenerationService receiptGenerationService;
-    private final EnhancedReceiptGenerationService enhancedService;
-    private final DatabaseInterface database;
-    private final GuiNotificationSystem notificationSystem;
-    private JTextField customerIdField;
-    private JTextField customerNameField;
-    private JTextField customerEmailField;
-    private JTextField paymentIdField;
-    private JTextField amountField;
-    private JComboBox<String> currencyCombo;
-    private JComboBox<String> paymentMethodCombo;
-    private JCheckBox paymentCompletedCheckbox;
-    private JTextArea receiptDisplayArea;
-    private JTextArea logsDisplayArea;
-    private JLabel statusLabel;
+
+    private JTextArea receiptArea;
+
+    private JComboBox<String> categoryReceiptBox;
+    private JComboBox<String> matchReceiptBox;
+    private JComboBox<String> reimbursementReceiptBox;
+
+    private JTextArea reimbursementStatusArea;
+
+    private final Map<String, ReceiptDocument> receiptStore =
+            new LinkedHashMap<>();
+
+    private final EnhancedReceiptGenerationService receiptService;
+    private final CategorizationService categorizationService;
+    private final ThreeWayMatchingService matcher;
+    private final ReimbursementService reimbursementService;
+
+    private String currentReportId = null;
 
     public ReceiptManagementUI() {
-        // Initialize services
-        this.database = new InMemoryDatabase();
-        Logger logger = new DatabaseLogger(database);
-        PaymentValidation paymentValidation = new StandardPaymentValidation();
-        ReceiptFormatter receiptFormatter = new PlainTextReceiptFormatter();
-        this.notificationSystem = new GuiNotificationSystem();
-        ExceptionHandlerInterface exceptionHandler = new ConsoleExceptionHandler();
 
-        this.receiptGenerationService = new ReceiptGenerationService(
-                paymentValidation,
-                receiptFormatter,
-                logger,
-                notificationSystem,
-                exceptionHandler
-        );
+        setTitle("Receipt Management System");
+        setSize(900, 600);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        // Initialize enhanced service with remaining features
-        this.enhancedService = new EnhancedReceiptGenerationService(
-                paymentValidation,
-                receiptFormatter,
-                logger,
-                notificationSystem,
-                exceptionHandler,
-                null,
-                null,
-                new ThreeWayMatchingService(),
-                new CategorizationService(),
-                null
-        );
+        PaymentValidation validation =
+                new StandardPaymentValidation();
 
-        // Setup UI
-        setupUI();
-        setLocationRelativeTo(null);
+        ReceiptFormatter formatter =
+                new PlainTextReceiptFormatter();
+
+        Logger logger =
+                new DatabaseLogger(
+                        new InMemoryDatabase()
+                );
+
+        NotificationSystemInterface notification =
+                new ConsoleNotificationSystem();
+
+        ExceptionHandlerInterface exceptionHandler =
+                new ConsoleExceptionHandler();
+
+        OCRServiceInterface ocr =
+                new MockOCRService();
+
+        CloudStorageInterface storage =
+                new InMemoryCloudStorage();
+
+        ThreeWayMatchingServiceInterface matching =
+                new ThreeWayMatchingService();
+
+        CategorizationServiceInterface categorization =
+                new CategorizationService();
+
+        AccountingIntegrationInterface accounting =
+                new QuickBooksIntegration();
+
+        receiptService =
+                new EnhancedReceiptGenerationService(
+                        validation,
+                        formatter,
+                        logger,
+                        notification,
+                        exceptionHandler,
+                        ocr,
+                        storage,
+                        matching,
+                        categorization,
+                        accounting
+                );
+
+        categorizationService =
+                new CategorizationService();
+
+        matcher =
+                new ThreeWayMatchingService();
+
+        reimbursementService =
+                new ReimbursementService();
+
+        JTabbedPane tabs =
+                new JTabbedPane();
+
+        tabs.addTab("Generate Receipt", createGeneratePanel());
+        tabs.addTab("Categorization", createCategorizationPanel());
+        tabs.addTab("3-Way Matching", createMatchingPanel());
+        tabs.addTab("Reimbursement", createReimbursementPanel());
+
+        add(tabs);
+
         setVisible(true);
     }
 
-    private void setupUI() {
-        setTitle("Advanced Receipt Management System - Full Feature Set");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1400, 900);
-        setLocationRelativeTo(null);
+    private JPanel createGeneratePanel() {
 
-        // Create main panel with tabs
-        JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.addTab("Generate Receipt", createReceiptGenerationPanel());
-        tabbedPane.addTab("Categorization", createCategorizationPanel());
-        tabbedPane.addTab("3-Way Matching", createThreeWayMatchingPanel());
-        tabbedPane.addTab("Reimbursement", createReimbursementPanel());
-        tabbedPane.addTab("View Logs", createLogsPanel());
+        JPanel panel = new JPanel(new BorderLayout());
 
-        add(tabbedPane, BorderLayout.CENTER);
-        
-        // Status bar at bottom
-        statusLabel = new JLabel("Ready");
-        statusLabel.setBorder(BorderFactory.createEtchedBorder());
-        add(statusLabel, BorderLayout.SOUTH);
-    }
+        JPanel form =
+                new JPanel(new GridLayout(7, 2, 5, 5));
 
-    private JPanel createReceiptGenerationPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JTextField customerIdField =
+                new JTextField("CUST-001");
 
-        // Left panel for input
-        JPanel inputPanel = createInputPanel();
-        
-        // Right panel for output
-        JPanel outputPanel = createOutputPanel();
+        JTextField nameField =
+                new JTextField("Rahul");
 
-        // Split pane
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, inputPanel, outputPanel);
-        splitPane.setDividerLocation(400);
-        splitPane.setResizeWeight(0.4);
+        JTextField emailField =
+                new JTextField("rahul@mail.com");
 
-        mainPanel.add(splitPane, BorderLayout.CENTER);
+        JTextField paymentIdField =
+                new JTextField("PAY-001");
 
-        return mainPanel;
-    }
+        JTextField amountField =
+                new JTextField("1500");
 
-    private JPanel createInputPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder("Payment & Customer Information"));
+        JComboBox<String> currencyBox =
+                new JComboBox<>(new String[]{"INR", "USD"});
 
-        // Customer Information Group
-        JPanel customerPanel = new JPanel();
-        customerPanel.setLayout(new GridLayout(3, 2, 10, 10));
-        customerPanel.setBorder(BorderFactory.createTitledBorder("Customer Details"));
+        JComboBox<String> methodBox =
+                new JComboBox<>(new String[]{
+                        "UPI",
+                        "CARD",
+                        "CASH",
+                        "BANK_TRANSFER"
+                });
 
-        customerPanel.add(new JLabel("Customer ID:"));
-        customerIdField = new JTextField(15);
-        customerIdField.setText("CUST-1001");
-        customerPanel.add(customerIdField);
+        form.add(new JLabel("Customer ID"));
+        form.add(customerIdField);
 
-        customerPanel.add(new JLabel("Full Name:"));
-        customerNameField = new JTextField(15);
-        customerNameField.setText("Anirudh");
-        customerPanel.add(customerNameField);
+        form.add(new JLabel("Customer Name"));
+        form.add(nameField);
 
-        customerPanel.add(new JLabel("Email:"));
-        customerEmailField = new JTextField(15);
-        customerEmailField.setText("anirudh@example.com");
-        customerPanel.add(customerEmailField);
+        form.add(new JLabel("Email"));
+        form.add(emailField);
 
-        panel.add(customerPanel);
-        panel.add(Box.createVerticalStrut(15));
+        form.add(new JLabel("Payment ID"));
+        form.add(paymentIdField);
 
-        // Payment Information Group
-        JPanel paymentPanel = new JPanel();
-        paymentPanel.setLayout(new GridLayout(5, 2, 10, 10));
-        paymentPanel.setBorder(BorderFactory.createTitledBorder("Payment Details"));
+        form.add(new JLabel("Amount"));
+        form.add(amountField);
 
-        paymentPanel.add(new JLabel("Payment ID:"));
-        paymentIdField = new JTextField(15);
-        paymentIdField.setText("PAY-2001");
-        paymentPanel.add(paymentIdField);
+        form.add(new JLabel("Currency"));
+        form.add(currencyBox);
 
-        paymentPanel.add(new JLabel("Amount:"));
-        amountField = new JTextField(15);
-        amountField.setText("2499.99");
-        paymentPanel.add(amountField);
+        form.add(new JLabel("Payment Method"));
+        form.add(methodBox);
 
-        paymentPanel.add(new JLabel("Currency:"));
-        currencyCombo = new JComboBox<>(new String[]{"INR", "USD", "EUR", "GBP", "JPY"});
-        currencyCombo.setSelectedItem("INR");
-        paymentPanel.add(currencyCombo);
+        panel.add(form, BorderLayout.NORTH);
 
-        paymentPanel.add(new JLabel("Payment Method:"));
-        paymentMethodCombo = new JComboBox<>(new String[]{"UPI", "CHEQUE", "CREDIT_CARD", "DEBIT_CARD", "NET_BANKING"});
-        paymentMethodCombo.setSelectedItem("UPI");
-        paymentPanel.add(paymentMethodCombo);
+        receiptArea = new JTextArea();
 
-        paymentPanel.add(new JLabel("Payment Completed:"));
-        paymentCompletedCheckbox = new JCheckBox();
-        paymentCompletedCheckbox.setSelected(true);
-        paymentPanel.add(paymentCompletedCheckbox);
+        panel.add(
+                new JScrollPane(receiptArea),
+                BorderLayout.CENTER
+        );
 
-        panel.add(paymentPanel);
-        panel.add(Box.createVerticalStrut(20));
+        JButton generateBtn =
+                new JButton("Generate Receipt");
 
-        // Buttons
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        generateBtn.addActionListener(e -> {
 
-        JButton generateButton = new JButton("Generate Receipt");
-        generateButton.setFont(new Font("Arial", Font.BOLD, 12));
-        generateButton.setPreferredSize(new Dimension(150, 40));
-        generateButton.addActionListener(e -> generateReceipt());
-        buttonPanel.add(generateButton);
+            try {
 
-        JButton clearButton = new JButton("Clear Form");
-        clearButton.setPreferredSize(new Dimension(120, 40));
-        clearButton.addActionListener(e -> clearForm());
-        buttonPanel.add(clearButton);
+                CustomerInformation customer =
+                        new CustomerInformation(
+                                customerIdField.getText(),
+                                nameField.getText(),
+                                emailField.getText()
+                        );
 
-        panel.add(buttonPanel);
-        panel.add(Box.createVerticalGlue());
+                PaymentDetails payment =
+                        new PaymentDetails(
+                                paymentIdField.getText(),
+                                new BigDecimal(amountField.getText()),
+                                (String) currencyBox.getSelectedItem(),
+                                (String) methodBox.getSelectedItem(),
+                                true,
+                                LocalDateTime.now()
+                        );
+
+                receiptService
+                        .generateReceipt(payment, customer)
+                        .ifPresent(receipt -> {
+
+                            receiptArea.setText(
+                                    receipt.getFormattedContent()
+                            );
+
+                            receiptStore.put(
+                                    receipt.getReceiptId(),
+                                    receipt
+                            );
+
+                            updateDropdowns();
+
+                        });
+
+            }
+            catch (Exception ex) {
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        ex.getMessage()
+                );
+
+            }
+
+        });
+
+        panel.add(generateBtn, BorderLayout.SOUTH);
 
         return panel;
     }
 
-    private JPanel createOutputPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.setBorder(BorderFactory.createTitledBorder("Receipt Output"));
+    private JPanel createMatchingPanel() {
 
-        JLabel receiptLabel = new JLabel("Generated Receipt:");
-        receiptLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        panel.add(receiptLabel);
+        JPanel panel = new JPanel(new BorderLayout());
 
-        receiptDisplayArea = new JTextArea(15, 40);
-        receiptDisplayArea.setEditable(false);
-        receiptDisplayArea.setFont(new Font("Monospaced", Font.PLAIN, 10));
-        receiptDisplayArea.setBackground(Color.WHITE);
-        receiptDisplayArea.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        
-        JScrollPane scrollPane = new JScrollPane(receiptDisplayArea);
-        panel.add(scrollPane);
+        matchReceiptBox = new JComboBox<>();
+
+        JButton matchBtn =
+                new JButton("Run 3-Way Match");
+
+        JTextArea output = new JTextArea();
+
+        matchBtn.addActionListener(e -> {
+
+            String id =
+                    (String) matchReceiptBox.getSelectedItem();
+
+            if (id == null) return;
+
+            ReceiptDocument receipt =
+                    receiptStore.get(id);
+
+            matcher
+                    .findMatchingPO(receipt)
+                    .flatMap(po ->
+                            matcher
+                                    .findMatchingInvoice(receipt)
+                                    .map(inv ->
+                                            matcher.performThreeWayMatch(
+                                                    receipt,
+                                                    po,
+                                                    inv
+                                            )
+                                    )
+                    )
+                    .ifPresent(result -> {
+
+                        java.util.List<String> discrepancies =
+                                matcher.getDiscrepancies(result);
+
+                        StringBuilder sb =
+                                new StringBuilder();
+
+                        sb.append("Receipt ID: ")
+                          .append(id)
+                          .append("\n\n");
+
+                        sb.append("Vendor Match: ")
+                          .append(result.isVendorMatches())
+                          .append("\n");
+
+                        sb.append("Amount Match: ")
+                          .append(result.isAmountMatches())
+                          .append("\n");
+
+                        sb.append("Quantity Match: ")
+                          .append(result.isQuantityMatches())
+                          .append("\n\n");
+
+                        if (!discrepancies.isEmpty()) {
+
+                            sb.append("Discrepancies:\n");
+
+                            for (String d : discrepancies) {
+
+                                sb.append("- ")
+                                  .append(d)
+                                  .append("\n");
+
+                            }
+
+                        }
+
+                        sb.append("\nFinal Status: ")
+                          .append(result.getMatchStatus());
+
+                        output.setText(sb.toString());
+
+                    });
+
+        });
+
+        JPanel top = new JPanel();
+
+        top.add(matchReceiptBox);
+        top.add(matchBtn);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(output));
 
         return panel;
     }
 
     private JPanel createCategorizationPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new GridLayout(3, 2, 10, 10));
-        inputPanel.setBorder(BorderFactory.createTitledBorder("Receipt Info"));
+        JPanel panel = new JPanel(new BorderLayout());
 
-        inputPanel.add(new JLabel("Payment ID:"));
-        JTextField catPaymentIdField = new JTextField(15);
-        catPaymentIdField.setText("PAY-2001");
-        inputPanel.add(catPaymentIdField);
+        categoryReceiptBox = new JComboBox<>();
 
-        inputPanel.add(new JLabel("Amount:"));
-        JTextField catAmountField = new JTextField(15);
-        catAmountField.setText("2499.99");
-        inputPanel.add(catAmountField);
+        JButton categorizeBtn =
+                new JButton("Categorize");
 
-        inputPanel.add(new JLabel("Vendor/Description:"));
-        JTextField catVendorField = new JTextField(15);
-        catVendorField.setText("Office Supplies");
-        inputPanel.add(catVendorField);
+        JTextArea output = new JTextArea();
 
-        JPanel buttonPanel = new JPanel();
-        JButton categorizeButton = new JButton("Categorize Receipt");
-        categorizeButton.addActionListener(e -> {
-            String vendor = catVendorField.getText();
-            String category = enhancedService.getCategorizationService().getCategory(vendor, "").getDisplayName();
-            JOptionPane.showMessageDialog(this, "Categorized as: " + category, "Category", JOptionPane.INFORMATION_MESSAGE);
+        categorizeBtn.addActionListener(e -> {
+
+            String id =
+                    (String) categoryReceiptBox.getSelectedItem();
+
+            if (id == null) return;
+
+            ReceiptDocument receipt =
+                    receiptStore.get(id);
+
+            ExpenseCategory category =
+                    categorizationService
+                            .categorizeReceipt(receipt);
+
+            output.setText(
+                    "Receipt ID: " + id +
+                    "\nCategory: " + category
+            );
+
         });
-        buttonPanel.add(categorizeButton);
-        inputPanel.add(buttonPanel);
 
-        mainPanel.add(inputPanel, BorderLayout.NORTH);
+        JPanel top = new JPanel();
 
-        JTextArea categoryOutputArea = new JTextArea();
-        categoryOutputArea.setEditable(false);
-        categoryOutputArea.setText("Available Categories:\n");
-        for (var cat : enhancedService.getCategorizationService().getAllCategories()) {
-            categoryOutputArea.append("  - " + cat.getDisplayName() + "\n");
-        }
-        mainPanel.add(new JScrollPane(categoryOutputArea), BorderLayout.CENTER);
+        top.add(categoryReceiptBox);
+        top.add(categorizeBtn);
 
-        return mainPanel;
-    }
-
-    private JPanel createThreeWayMatchingPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new GridLayout(6, 2, 10, 10));
-        inputPanel.setBorder(BorderFactory.createTitledBorder("Match Documents"));
-
-        inputPanel.add(new JLabel("Receipt Amount:"));
-        JTextField receiptAmtField = new JTextField("5000");
-        inputPanel.add(receiptAmtField);
-
-        inputPanel.add(new JLabel("PO Amount:"));
-        JTextField poAmtField = new JTextField("5000");
-        inputPanel.add(poAmtField);
-
-        inputPanel.add(new JLabel("Invoice Amount:"));
-        JTextField invoiceAmtField = new JTextField("5000");
-        inputPanel.add(invoiceAmtField);
-
-        inputPanel.add(new JLabel("Vendor ID (PO/Invoice):"));
-        JTextField vendorField = new JTextField("VENDOR-001");
-        inputPanel.add(vendorField);
-
-        inputPanel.add(new JLabel("Quantity:"));
-        JTextField quantityField = new JTextField("10");
-        inputPanel.add(quantityField);
-
-        JButton matchButton = new JButton("Perform 3-Way Match");
-        matchButton.addActionListener(e -> {
-            try {
-                ReceiptDocument receipt = new ReceiptDocument.Builder()
-                        .withReceiptId("REC-001")
-                        .withCustomerId("CUST-001")
-                        .withCustomerName("Test Customer")
-                        .withCustomerEmail("test@test.com")
-                        .withPaymentId("PAY-001")
-                        .withAmount(new BigDecimal(receiptAmtField.getText()))
-                        .withCurrency("INR")
-                        .withPaymentMethod("CHEQUE")
-                        .withIssuedAt(LocalDateTime.now())
-                        .withFormattedContent("Test Receipt")
-                        .build();
-
-                PurchaseOrder po = new PurchaseOrder.Builder()
-                        .poId("PO-001")
-                        .vendorId(vendorField.getText())
-                        .vendorName("Test Vendor")
-                        .itemDescription("Test Item")
-                        .orderedAmount(new BigDecimal(poAmtField.getText()))
-                        .currency("INR")
-                        .orderedQuantity(Integer.parseInt(quantityField.getText()))
-                        .createdAt(LocalDateTime.now())
-                        .status("PENDING")
-                        .build();
-
-                Invoice invoice = new Invoice.Builder()
-                        .invoiceId("INV-001")
-                        .vendorId(vendorField.getText())
-                        .vendorName("Test Vendor")
-                        .itemDescription("Test Item")
-                        .invoicedAmount(new BigDecimal(invoiceAmtField.getText()))
-                        .currency("INR")
-                        .receivedQuantity(Integer.parseInt(quantityField.getText()))
-                        .invoiceDate(LocalDateTime.now())
-                        .status("PENDING")
-                        .build();
-
-                var matchResult = enhancedService.performThreeWayMatch(receipt, po, invoice);
-                if (matchResult.isPresent()) {
-                    String result = "Match Status: " + matchResult.get().getMatchStatus() + "\n" +
-                            "Amount Match: " + matchResult.get().isAmountMatches() + "\n" +
-                            "Quantity Match: " + matchResult.get().isQuantityMatches() + "\n" +
-                            "Vendor Match: " + matchResult.get().isVendorMatches();
-                    JOptionPane.showMessageDialog(this, result, "Match Result", JOptionPane.INFORMATION_MESSAGE);
-                }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Invalid input format", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-        inputPanel.add(matchButton);
-
-        mainPanel.add(inputPanel, BorderLayout.NORTH);
-        return mainPanel;
-    }
-
-    private JPanel createReimbursementPanel() {
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JPanel inputPanel = new JPanel();
-        inputPanel.setLayout(new GridLayout(3, 2, 10, 10));
-        inputPanel.setBorder(BorderFactory.createTitledBorder("Expense Report"));
-
-        inputPanel.add(new JLabel("Employee ID:"));
-        JTextField empIdField = new JTextField("EMP-001");
-        inputPanel.add(empIdField);
-
-        inputPanel.add(new JLabel("Employee Name:"));
-        JTextField empNameField = new JTextField("John Doe");
-        inputPanel.add(empNameField);
-
-        inputPanel.add(new JLabel("Total Amount (INR):"));
-        JTextField totalAmtField = new JTextField("5000");
-        inputPanel.add(totalAmtField);
-
-        JPanel buttonPanel = new JPanel();
-        JButton createReportButton = new JButton("Create Expense Report");
-        createReportButton.addActionListener(e -> {
-            ReimbursementService reimbService = new ReimbursementService();
-            var report = reimbService.createExpenseReport(empIdField.getText(), empNameField.getText());
-            JOptionPane.showMessageDialog(this, 
-                    "Report Created:\n" +
-                    "ID: " + report.getReportId() + "\n" +
-                    "Status: " + report.getStatus(),
-                    "Success", JOptionPane.INFORMATION_MESSAGE);
-        });
-        buttonPanel.add(createReportButton);
-        inputPanel.add(buttonPanel);
-
-        mainPanel.add(inputPanel, BorderLayout.NORTH);
-
-        JTextArea reimbInfoArea = new JTextArea();
-        reimbInfoArea.setEditable(false);
-        reimbInfoArea.setText("Reimbursement Processing Features:\n\n" +
-                "- Create expense reports\n" +
-                "- Add receipts to reports\n" +
-                "- Submit for approval\n" +
-                "- Manager approval workflow\n" +
-                "- Rejection handling\n" +
-                "- Reimbursement processing\n" +
-                "- Payment integration\n" +
-                "- Mobile app support");
-        mainPanel.add(new JScrollPane(reimbInfoArea), BorderLayout.CENTER);
-
-        return mainPanel;
-    }
-
-    private JPanel createLogsPanel() {
-        JPanel panel = new JPanel();
-        panel.setLayout(new BorderLayout(10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JLabel logsLabel = new JLabel("Application Logs:");
-        logsLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        panel.add(logsLabel, BorderLayout.NORTH);
-
-        logsDisplayArea = new JTextArea();
-        logsDisplayArea.setEditable(false);
-        logsDisplayArea.setFont(new Font("Monospaced", Font.PLAIN, 10));
-        logsDisplayArea.setBackground(Color.WHITE);
-        
-        JScrollPane scrollPane = new JScrollPane(logsDisplayArea);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        JButton refreshButton = new JButton("Refresh Logs");
-        refreshButton.addActionListener(e -> refreshLogs());
-        panel.add(refreshButton, BorderLayout.SOUTH);
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(output));
 
         return panel;
     }
 
-    private void generateReceipt() {
-        try {
-            // Validate inputs
-            String customerId = customerIdField.getText().trim();
-            String customerName = customerNameField.getText().trim();
-            String email = customerEmailField.getText().trim();
-            String paymentId = paymentIdField.getText().trim();
-            String amountStr = amountField.getText().trim();
-            String currency = (String) currencyCombo.getSelectedItem();
-            String paymentMethod = (String) paymentMethodCombo.getSelectedItem();
-            boolean isCompleted = paymentCompletedCheckbox.isSelected();
+    private JPanel createReimbursementPanel() {
 
-            if (customerId.isEmpty() || customerName.isEmpty() || email.isEmpty() ||
-                paymentId.isEmpty() || amountStr.isEmpty()) {
-                statusLabel.setText("Error: All fields are required");
-                statusLabel.setForeground(Color.RED);
-                return;
-            }
+        JPanel panel = new JPanel(new BorderLayout());
 
-            BigDecimal amount = new BigDecimal(amountStr);
+        reimbursementReceiptBox =
+                new JComboBox<>();
 
-            // Create domain objects
-            CustomerInformation customer = new CustomerInformation(customerId, customerName, email);
-            PaymentDetails payment = new PaymentDetails(
-                    paymentId,
-                    amount,
-                    currency,
-                    paymentMethod,
-                    isCompleted,
-                    LocalDateTime.now()
-            );
+        JButton createBtn =
+                new JButton("Create Expense Report");
 
-            // Generate receipt
-            receiptGenerationService.generateReceipt(payment, customer)
-                    .ifPresentOrElse(
-                            receipt -> {
-                                receiptDisplayArea.setText(receipt.getFormattedContent());
-                                statusLabel.setText("Receipt generated successfully: " + receipt.getReceiptId());
-                                statusLabel.setForeground(new Color(0, 128, 0));
-                            },
-                            () -> {
-                                receiptDisplayArea.setText("Receipt generation failed. Please check the validation errors.");
-                                statusLabel.setText("Receipt generation failed");
-                                statusLabel.setForeground(Color.RED);
-                            }
+        JButton submitBtn =
+                new JButton("Submit Report");
+
+        JButton approveBtn =
+                new JButton("Approve Report");
+
+        reimbursementStatusArea =
+                new JTextArea();
+
+        createBtn.addActionListener(e -> {
+
+            String receiptId =
+                    (String) reimbursementReceiptBox.getSelectedItem();
+
+            if (receiptId == null) return;
+
+            ReceiptDocument receipt =
+                    receiptStore.get(receiptId);
+
+            ExpenseReport report =
+                    reimbursementService.createExpenseReport(
+                            "EMP-001",
+                            "Service Engineer",
+                            receiptId,
+                            receipt.getAmount(),
+                            receipt.getCurrency()
                     );
 
-            refreshLogs();
+            currentReportId =
+                    report.getReportId();
 
-        } catch (NumberFormatException e) {
-            statusLabel.setText("Error: Invalid amount format");
-            statusLabel.setForeground(Color.RED);
-            JOptionPane.showMessageDialog(this, "Please enter a valid amount", "Invalid Input", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception e) {
-            statusLabel.setText("Error: " + e.getMessage());
-            statusLabel.setForeground(Color.RED);
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
+            reimbursementStatusArea.setText(
+                    "Report ID: " +
+                    report.getReportId() +
+                    "\nStatus: " +
+                    report.getStatus()
+            );
 
-    private void clearForm() {
-        customerIdField.setText("CUST-1001");
-        customerNameField.setText("Anirudh");
-        customerEmailField.setText("anirudh@example.com");
-        paymentIdField.setText("PAY-2001");
-        amountField.setText("2499.99");
-        currencyCombo.setSelectedItem("INR");
-        paymentMethodCombo.setSelectedItem("UPI");
-        paymentCompletedCheckbox.setSelected(true);
-        receiptDisplayArea.setText("");
-        statusLabel.setText("Form cleared");
-        statusLabel.setForeground(Color.BLACK);
-    }
-
-    private void refreshLogs() {
-        StringBuilder logsText = new StringBuilder();
-        database.readLogs().forEach(log -> {
-            logsText.append(log).append("\n");
         });
-        logsDisplayArea.setText(logsText.toString());
-        logsDisplayArea.setCaretPosition(0);
+
+        submitBtn.addActionListener(e -> {
+
+            if (currentReportId == null) return;
+
+            ExpenseReport report =
+                    reimbursementService.submitReport(
+                            currentReportId
+                    );
+
+            reimbursementStatusArea.setText(
+                    "Report ID: " +
+                    report.getReportId() +
+                    "\nStatus: " +
+                    report.getStatus()
+            );
+
+        });
+
+        approveBtn.addActionListener(e -> {
+
+            if (currentReportId == null) return;
+
+            ExpenseReport report =
+                    reimbursementService.approveReport(
+                            currentReportId
+                    );
+
+            reimbursementStatusArea.setText(
+                    "Report ID: " +
+                    report.getReportId() +
+                    "\nStatus: " +
+                    report.getStatus()
+            );
+
+        });
+
+        JPanel top = new JPanel();
+
+        top.add(reimbursementReceiptBox);
+        top.add(createBtn);
+        top.add(submitBtn);
+        top.add(approveBtn);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(reimbursementStatusArea));
+
+        return panel;
+    }
+
+    private void updateDropdowns() {
+
+        categoryReceiptBox.removeAllItems();
+        matchReceiptBox.removeAllItems();
+        reimbursementReceiptBox.removeAllItems();
+
+        for (String id : receiptStore.keySet()) {
+
+            categoryReceiptBox.addItem(id);
+            matchReceiptBox.addItem(id);
+            reimbursementReceiptBox.addItem(id);
+
+        }
+
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new ReceiptManagementUI());
+
+        SwingUtilities.invokeLater(
+                ReceiptManagementUI::new
+        );
+
     }
+
 }
