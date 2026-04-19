@@ -18,6 +18,8 @@ package com.scm.packing.integration.database;
  */
 public class DatabaseLayerFactory {
 
+    private static final String MODE_PROPERTY = "packing.integration.database.mode";
+
     /**
      * Creates the most capable available {@link IDatabaseLayer}.
      *
@@ -25,6 +27,21 @@ public class DatabaseLayerFactory {
      *         is available, or a {@link FlatFileDatabaseAdapter} otherwise
      */
     public static IDatabaseLayer create() {
+        String forcedMode = System.getProperty(MODE_PROPERTY, "auto").trim().toLowerCase();
+        if ("flat".equals(forcedMode)) {
+            System.out.println("[DatabaseLayerFactory] Forced mode=flat — using FlatFileDatabaseAdapter.");
+            return new FlatFileDatabaseAdapter();
+        }
+        if ("scm".equals(forcedMode)) {
+            try {
+                System.out.println("[DatabaseLayerFactory] Forced mode=scm — using SCMDatabaseAdapter.");
+                return new SCMDatabaseAdapter();
+            } catch (LinkageError | RuntimeException e) {
+                System.out.println("[DatabaseLayerFactory] Forced SCM mode failed; falling back to FlatFileDatabaseAdapter.");
+                return new FlatFileDatabaseAdapter();
+            }
+        }
+
         // -----------------------------------------------------------
         // FALLBACK LOGIC: Try to load the SCM facade class.  If it is
         // not on the classpath, Class.forName will throw, and we
@@ -34,7 +51,7 @@ public class DatabaseLayerFactory {
             Class.forName("com.jackfruit.scm.database.facade.SupplyChainDatabaseFacade");
             System.out.println("[DatabaseLayerFactory] SCM database-module found — using SCMDatabaseAdapter.");
             return new SCMDatabaseAdapter();
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | LinkageError | RuntimeException e) {
             System.out.println("[DatabaseLayerFactory] SCM database-module NOT found on classpath.");
             System.out.println("[DatabaseLayerFactory] Falling back to FlatFileDatabaseAdapter (session-only persistence).");
             return new FlatFileDatabaseAdapter();

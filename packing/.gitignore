@@ -46,3 +46,15 @@ buildNumber.properties
 
 # Fallback temporary files
 *.tmp
+
+# Sensitive local configuration
+src/main/resources/database.properties
+lib/database.properties
+lib/scm-gui.properties
+
+# Local debug/output artifacts
+target/cp.txt
+
+# Keep safe templates committed
+!src/main/resources/database.properties.example
+!lib/database.properties.example

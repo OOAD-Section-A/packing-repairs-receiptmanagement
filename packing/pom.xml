@@ -15,6 +15,24 @@
     </properties>
 
     <dependencies>
+        <!-- SCM Database Module (provided as standalone JAR in /lib) -->
+        <dependency>
+            <groupId>com.jackfruit.scm</groupId>
+            <artifactId>database-module-standalone</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/database-module-1.0.0-SNAPSHOT-standalone.jar</systemPath>
+        </dependency>
+
+        <!-- SCM Exception Handler (provided by exception subsystem team) -->
+        <dependency>
+            <groupId>com.scm</groupId>
+            <artifactId>scm-exception-handler</artifactId>
+            <version>3.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/scm-exception-handler-v3.jar</systemPath>
+        </dependency>
+
         <!-- FlatLaf for modern Swing Look and Feel -->
         <dependency>
             <groupId>com.formdev</groupId>
@@ -51,6 +69,10 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
+                <configuration>
+                    <!-- Required so system-scope JARs under /lib are on exec classpath -->
+                    <classpathScope>compile</classpathScope>
+                </configuration>
             </plugin>
 
             <!-- Copy all dependency JARs to target/dependency so we can

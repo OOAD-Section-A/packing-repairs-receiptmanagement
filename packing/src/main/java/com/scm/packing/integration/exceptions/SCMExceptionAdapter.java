@@ -1,86 +1,119 @@
 package com.scm.packing.integration.exceptions;
 
+import com.scm.core.Severity;
+import com.scm.factory.SCMExceptionFactory;
+import com.scm.handler.SCMExceptionHandler;
+import com.scm.subsystems.PackingRepairsReceiptSubsystem;
+
 /**
  * Adapter that connects to the real SCM Exception Handler subsystem.
  *
  * <p><b>Design Pattern – Adapter (Structural):</b> Bridges the
  * {@link IExceptionDispatcher} interface expected by the Packing
- * subsystem with the fire* methods defined in the SCM Interface
- * Specification (see {@code SCM_Interface_Specification.docx}).</p>
+ * subsystem with the concrete singleton API exposed by the Exception
+ * team JAR ({@code com.scm.subsystems.PackingRepairsReceiptSubsystem}).</p>
  *
  * <p><b>Integration note:</b> This class depends on the SCM exception
- * handler JARs being on the classpath (package
- * {@code com.scm.exceptions}).  If they are absent, the
+ * handler JARs being on the classpath (packages under
+ * {@code com.scm.*}). If they are absent, the
  * {@link ExceptionDispatcherFactory} falls back to
  * {@link FallbackConsoleLogger}.</p>
- *
- * <p>The SCM spec requires:</p>
- * <ol>
- *   <li>Implement the relevant {@code I*ExceptionSource} interfaces
- *       (e.g. {@code IResourceAvailabilityExceptionSource}).</li>
- *   <li>Store the handler reference passed via
- *       {@code registerHandler(SCMExceptionHandler h)}.</li>
- *   <li>Call the appropriate {@code fire*} method when an exception is
- *       detected.</li>
- *   <li>Halt the failing operation immediately after firing.</li>
- * </ol>
  *
  * <p><b>SOLID – Single Responsibility:</b> Exception forwarding only —
  * no business logic.</p>
  */
 public class SCMExceptionAdapter implements IExceptionDispatcher {
 
-    /*
-     * When the SCM exception JARs are added to the classpath, this class
-     * should implement the relevant SCM interfaces:
-     *
-     *   implements IResourceAvailabilityExceptionSource,
-     *              IStateWorkflowExceptionSource,
-     *              ISystemInfrastructureExceptionSource
-     *
-     * and store the handler reference:
-     *
-     *   private SCMExceptionHandler handler;
-     *
-     *   @Override
-     *   public void registerHandler(SCMExceptionHandler h) {
-     *       this.handler = h;
-     *   }
-     */
+    private static final String DEFAULT_SUBSYSTEM = "Packing, Repairs, Receipt Management";
+    private final PackingRepairsReceiptSubsystem subsystem;
 
     public SCMExceptionAdapter() {
-        // -----------------------------------------------------------
-        // INTEGRATION PLACEHOLDER
-        // When the SCM exception JARs are on the classpath, implement
-        // registerHandler() and delegate dispatch() to the appropriate
-        // fire* methods.
-        //
-        // Example:
-        //   handler.fireResourceNotAvailable(159, "Item", itemId);
-        //
-        // A null-check on handler is recommended as a safeguard:
-        //   if (handler == null) return;
-        // -----------------------------------------------------------
-        System.out.println("[SCMExceptionAdapter] Initialised (stub — real handler not yet wired).");
+        this.subsystem = PackingRepairsReceiptSubsystem.INSTANCE;
+        System.out.println("[SCMExceptionAdapter] Initialised with PackingRepairsReceiptSubsystem.");
     }
 
     @Override
     public void dispatch(int exceptionId, String severity, String subsystem, String detail) {
-        // -----------------------------------------------------------
-        // STUB: In production this would call the appropriate fire*
-        // method on the SCM handler.
-        //
-        // Example for exception 159 (ITEM_NOT_AVAILABLE_FOR_PACKING):
-        //   if (handler == null) return;
-        //   handler.fireResourceNotAvailable(159, "PackingItem", itemId);
-        // -----------------------------------------------------------
-        System.out.println(String.format(
-                "[SCMExceptionAdapter] DISPATCH id=%d sev=%s sub=%s detail=%s",
-                exceptionId, severity, subsystem, detail));
+        String resolvedSubsystem = normalizeSubsystem(subsystem);
+        String resolvedDetail = detail == null ? "(no detail provided)" : detail;
+
+        try {
+            switch (exceptionId) {
+                case 9:
+                    this.subsystem.onInvalidRepairRequest(resolvedSubsystem, resolvedDetail);
+                    return;
+                case 157:
+                    this.subsystem.onSparePartNotAvailable(resolvedDetail);
+                    return;
+                case 158:
+                    this.subsystem.onInventoryReservationFailed(resolvedSubsystem, resolvedDetail);
+                    return;
+                case 159:
+                    this.subsystem.onItemNotAvailableForPacking(resolvedSubsystem, resolvedDetail);
+                    return;
+                case 208:
+                    this.subsystem.onWarrantyValidationFailed(resolvedSubsystem, resolvedDetail);
+                    return;
+                case 209:
+                    this.subsystem.onRepairExecutionFailed(resolvedSubsystem, resolvedDetail);
+                    return;
+                case 210:
+                    this.subsystem.onRepairDelayDetected(resolvedSubsystem, 0L, 0L);
+                    return;
+                case 359:
+                    this.subsystem.onPackageCreationFailed(resolvedDetail);
+                    return;
+                case 360:
+                    this.subsystem.onReceiptStorageFailed(resolvedDetail);
+                    return;
+                case 361:
+                    this.subsystem.onReceiptGenerationFailed(resolvedDetail);
+                    return;
+                case 362:
+                    this.subsystem.onPaymentProcessingFailed(resolvedSubsystem, resolvedDetail);
+                    return;
+                case 363:
+                    this.subsystem.onCostCalculationFailed(resolvedSubsystem, resolvedDetail);
+                    return;
+                default:
+                    SCMExceptionHandler.INSTANCE.handle(
+                            SCMExceptionFactory.create(
+                                    exceptionId,
+                                    "PACKING_EXCEPTION_" + exceptionId,
+                                    resolvedDetail,
+                                    resolvedSubsystem,
+                                    mapSeverity(severity)));
+            }
+        } catch (Exception e) {
+            System.err.println("[SCMExceptionAdapter] Failed to dispatch to SCM handler: " + e.getMessage());
+            SCMExceptionHandler.INSTANCE.handle(
+                    SCMExceptionFactory.createUnregistered(
+                            resolvedSubsystem,
+                            "Dispatch fallback triggered: " + resolvedDetail));
+        }
     }
 
     @Override
     public void dispatchUnregistered(String detail) {
-        dispatch(0, "MINOR", "Packing", "UNREGISTERED_EXCEPTION — " + detail);
+        String resolvedDetail = detail == null ? "(no detail provided)" : detail;
+        SCMExceptionHandler.INSTANCE.handle(
+                SCMExceptionFactory.createUnregistered(
+                        DEFAULT_SUBSYSTEM,
+                        "UNREGISTERED_EXCEPTION - " + resolvedDetail));
+    }
+
+    private static String normalizeSubsystem(String subsystem) {
+        return (subsystem == null || subsystem.isBlank()) ? DEFAULT_SUBSYSTEM : subsystem;
+    }
+
+    private static Severity mapSeverity(String severity) {
+        if (severity == null) {
+            return Severity.MINOR;
+        }
+        try {
+            return Severity.valueOf(severity.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return Severity.MINOR;
+        }
     }
 }
