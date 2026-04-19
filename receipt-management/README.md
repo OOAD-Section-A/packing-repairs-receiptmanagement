@@ -1,10 +1,22 @@
 # Receipt Management
 
-This project converts the supplied component diagram into a concrete class design and a working Java implementation.
+This project demonstrates a receipt management system with both CLI and GUI interfaces.
+
+## Overview
+
+The Receipt Management System provides a complete solution for generating and managing payment receipts with validation, formatting, logging, and notification capabilities.
+
+### Key Features
+
+- **Payment Validation**: Validates payment details before generating receipts
+- **Receipt Generation**: Creates formatted receipt documents
+- **Logging**: Persists all operations to an in-memory database
+- **Error Handling**: Gracefully handles validation failures
+- **Multiple Interfaces**: Both CLI and modern Swing-based GUI available
 
 ## Design summary
 
-The image was translated into an object-oriented design with these main responsibilities:
+The project follows clean architecture principles with these main responsibilities:
 
 - `ReceiptGenerationService` acts as the controller/facade for the receipt flow.
 - `PaymentValidation`, `ReceiptFormatter`, and `Logger` are abstractions so the service depends on interfaces rather than concrete classes.
@@ -19,7 +31,7 @@ The image was translated into an object-oriented design with these main responsi
   - Open/Closed: new validators, formatters, or notification channels can be added without changing the service.
   - Liskov Substitution: all implementations respect their interface contracts.
   - Interface Segregation: each port exposes a focused API.
-  - Dependency Inversion: the application depends on interfaces, with concrete adapters injected in `Main`.
+  - Dependency Inversion: the application depends on interfaces, with concrete adapters injected.
 - GRASP:
   - Controller: `ReceiptGenerationService`
   - Information Expert: validation stays in `StandardPaymentValidation`, formatting in `PlainTextReceiptFormatter`
@@ -28,7 +40,7 @@ The image was translated into an object-oriented design with these main responsi
 - Patterns used where they add value:
   - Strategy via `PaymentValidation`, `ReceiptFormatter`, `NotificationSystemInterface`, and `ExceptionHandlerInterface`
   - Builder via `ReceiptDocument.Builder`
-  - Dependency Injection through constructor wiring in `Main`
+  - Dependency Injection through constructor wiring
 
 ## Class diagram
 
