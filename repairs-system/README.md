@@ -33,11 +33,8 @@ New-Item -ItemType Directory -Path .\bin | Out-Null
 $sources = Get-ChildItem -Path .\src -Filter *.java -Recurse | ForEach-Object { $_.FullName }
 javac -d .\bin $sources
 
-# 4) Run the interactive console UI
-java -cp .\bin com.repairs.RepairsSubSystemApplication
-
-# Optional: run scripted demo mode
-# java -cp .\bin com.repairs.RepairsSubSystemApplication demo
+# 4) Run the GUI application
+java -cp .\bin com.repairs.GUIRepairsApplication
 ```
 
 If `javac` or `java` is not recognized, install JDK 17+ and ensure it is on `PATH`.
@@ -285,7 +282,7 @@ com/repairs/
 │   ├── ConsoleRepairExecutionView.java
 │   └── ConsoleBillingView.java
 │
-└── RepairsSubSystemApplication.java  # Main entry point
+└── GUIRepairsApplication.java  # Main entry point
 ```
 
 ---
@@ -516,20 +513,15 @@ if (Test-Path .\bin) { Remove-Item .\bin -Recurse -Force }
 New-Item -ItemType Directory -Path .\bin | Out-Null
 $sources = Get-ChildItem -Path .\src -Filter *.java -Recurse | ForEach-Object { $_.FullName }
 javac -d .\bin $sources
-# Interactive UI (recommended)
-java -cp .\bin com.repairs.RepairsSubSystemApplication
-
-# Scripted demo mode
-# java -cp .\bin com.repairs.RepairsSubSystemApplication demo
+# GUI application
+java -cp .\bin com.repairs.GUIRepairsApplication
 ```
 
-Interactive mode shows a menu where you can:
+The GUI lets you:
 - Submit new repair requests via the intake view
 - Start and update repair execution
 - Generate bills and process payments
 - View outstanding bills
-
-If you run demo mode (`demo` argument), it executes predefined flows and exits.
 
 ### Database and Exception Subsystem Integration
 
