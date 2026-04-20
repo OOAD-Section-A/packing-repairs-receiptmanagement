@@ -293,10 +293,14 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
         JButton btnPalletize = styledButton("📦 Add to Pallet", ACCENT_PURPLE);
         btnPalletize.addActionListener(e -> palletizeSelected());
 
+        JButton btnUnpack = styledButton("↩ Unpack Selected", ACCENT_ORANGE);
+        btnUnpack.addActionListener(e -> unpackSelectedJobs());
+
         JLabel jobHint = new JLabel("<html><i style='color:#888;font-size:10px;'>Select packed jobs (Ctrl+click) to palletize or view barcodes</i></html>");
 
         actionBar.add(btnBarcode);
         actionBar.add(btnPalletize);
+        actionBar.add(btnUnpack);
         actionBar.add(jobHint);
         panel.add(actionBar, BorderLayout.NORTH);
 
@@ -644,6 +648,34 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
         showBarcodeDialog(label);
     }
 
+    private void unpackSelectedJobs() {
+        List<String> selectedJobIds = getSelectedJobIds();
+        if (selectedJobIds.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Select at least one packed job to unpack.",
+                    "No Job Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Unpack selected job(s)? This removes their persisted packaging rows\n"
+                        + "and makes the source orders packable again.",
+                "Confirm Unpack", JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.OK_OPTION) {
+            return;
+        }
+
+        int unpacked = controller.unpackSelectedJobs(selectedJobIds);
+        if (unpacked > 0) {
+            refreshOrderTable();
+            refreshPalletTable();
+            updateKpis();
+            JOptionPane.showMessageDialog(this,
+                    "Unpacked " + unpacked + " job(s).",
+                    "Unpack Complete", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
     private List<String> getSelectedJobIds() {
         List<String> ids = new ArrayList<>();
         int[] rows = jobTable.getSelectedRows();
@@ -759,6 +791,9 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
                     break;
 
                 case JOB_REMOVED:
+                    removeJobRow(job);
+                    refreshOrderTable();
+                    refreshPalletTable();
                     updateKpis();
                     break;
             }
@@ -786,6 +821,16 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
             if (job.getJobId().equals(jobTableModel.getValueAt(i, 0))) {
                 jobTableModel.setValueAt(job.getStatus().getDisplayLabel(), i, 4);
                 jobTableModel.setValueAt(job.getProgress(), i, 5);
+                return;
+            }
+        }
+    }
+
+    private void removeJobRow(PackingJob job) {
+        if (job == null) return;
+        for (int i = 0; i < jobTableModel.getRowCount(); i++) {
+            if (job.getJobId().equals(jobTableModel.getValueAt(i, 0))) {
+                jobTableModel.removeRow(i);
                 return;
             }
         }

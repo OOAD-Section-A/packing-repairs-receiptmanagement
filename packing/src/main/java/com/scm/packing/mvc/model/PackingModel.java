@@ -147,6 +147,15 @@ public class PackingModel {
         }
     }
 
+    /** Marks an order as unpacked/re-opened for packing. */
+    public void markOrderUnpacked(String orderId) {
+        Order order = orders.get(orderId);
+        if (order != null) {
+            order.setPacked(false);
+            databaseLayer.updateOrder(order);
+        }
+    }
+
     // ---------------------------------------------------------------
     // Job management
     // ---------------------------------------------------------------
@@ -184,6 +193,53 @@ public class PackingModel {
 
     public PackingJob getJob(String jobId) {
         return jobs.get(jobId);
+    }
+
+    /**
+     * Reverts a packed job: removes persisted DB rows, detaches from pallets,
+     * and marks source orders as unpacked so they can be packed again.
+     */
+    public boolean unpackJob(String jobId) {
+        PackingJob job = jobs.get(jobId);
+        if (job == null) {
+            publishStatus("⚠ Job " + jobId + " not found.");
+            return false;
+        }
+
+        if (job.getStatus() != PackingJobStatus.PACKED) {
+            publishStatus("⚠ Job " + jobId + " is not packed.");
+            return false;
+        }
+
+        boolean deleted;
+        try {
+            deleted = databaseLayer.deleteJob(job);
+        } catch (Exception e) {
+            exceptionDispatcher.dispatchUnregistered(
+                    "Failed to unpack job " + jobId + ": " + e.getMessage());
+            return false;
+        }
+
+        if (!deleted) {
+            publishStatus("⚠ Could not remove persisted packaging row(s) for job " + jobId + ".");
+            return false;
+        }
+
+        jobs.remove(jobId);
+        barcodes.remove(jobId);
+
+        for (PackingUnit unit : units) {
+            unit.removeJob(jobId);
+        }
+        units.removeIf(unit -> unit.getCurrentSize() == 0);
+
+        for (String orderId : splitOrderIds(job.getOrderId())) {
+            markOrderUnpacked(orderId);
+        }
+
+        publishStatus("↩ Unpacked job " + jobId + ". Orders can be packed again.");
+        fireEvent(PackingEventType.JOB_REMOVED, job, "Job removed: " + jobId);
+        return true;
     }
 
     // ---------------------------------------------------------------
@@ -272,4 +328,19 @@ public class PackingModel {
 
     public IExceptionDispatcher getExceptionDispatcher() { return exceptionDispatcher; }
     public IDatabaseLayer getDatabaseLayer()             { return databaseLayer; }
+
+    private static List<String> splitOrderIds(String rawOrderIds) {
+        if (rawOrderIds == null || rawOrderIds.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        List<String> parsed = new ArrayList<>();
+        for (String token : rawOrderIds.split(",")) {
+            String trimmed = token.trim();
+            if (!trimmed.isEmpty()) {
+                parsed.add(trimmed);
+            }
+        }
+        return parsed;
+    }
 }
