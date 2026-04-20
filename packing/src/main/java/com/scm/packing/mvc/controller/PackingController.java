@@ -247,6 +247,7 @@ public class PackingController {
         }
 
         if (added > 0) {
+            model.persistUnits();
             model.publishStatus("📦 Added " + added + " job(s) to Pallet " + palletId
                     + " — now " + pallet.getCurrentSize() + "/" + pallet.getMaxCapacity());
         }
@@ -268,6 +269,7 @@ public class PackingController {
         }
         boolean removed = pallet.removeJob(jobId);
         if (removed) {
+            model.persistUnits();
             model.publishStatus("📦 Removed job " + jobId + " from Pallet " + palletId
                     + " — now " + pallet.getCurrentSize() + "/" + pallet.getMaxCapacity());
         } else {

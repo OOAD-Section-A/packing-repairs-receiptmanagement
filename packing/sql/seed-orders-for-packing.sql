@@ -42,7 +42,8 @@ ON DUPLICATE KEY UPDATE
 
 -- ------------------------------------------------------------
 -- Orders ready for packing
--- Two orders share the same customer to exercise consolidation
+-- Order distribution for strategy demo:
+--   2001 => all fragile, 2002 => all non-fragile, 2003+ => mixed.
 -- ------------------------------------------------------------
 INSERT INTO orders (
     order_id,
@@ -53,8 +54,8 @@ INSERT INTO orders (
     payment_status,
     sales_channel
 ) VALUES
-    ('ORD-PACK-2001', 'CUST-PACK-101', 'CONFIRMED', NOW(), 2800.00, 'PAID', 'ONLINE'),
-    ('ORD-PACK-2002', 'CUST-PACK-101', 'CONFIRMED', NOW(), 1599.00, 'PAID', 'ONLINE'),
+    ('ORD-PACK-2001', 'CUST-PACK-101', 'CONFIRMED', NOW(), 2650.00, 'PAID', 'ONLINE'),
+    ('ORD-PACK-2002', 'CUST-PACK-102', 'CONFIRMED', NOW(), 1599.00, 'PAID', 'ONLINE'),
     ('ORD-PACK-2003', 'CUST-PACK-202', 'CONFIRMED', NOW(), 899.00, 'PAID', 'POS'),
     ('ORD-PACK-2004', 'CUST-PACK-303', 'CONFIRMED', NOW(), 2700.00, 'PAID', 'ONLINE'),
     ('ORD-PACK-2005', 'CUST-PACK-303', 'CONFIRMED', NOW(), 999.00, 'PAID', 'ONLINE'),
@@ -80,9 +81,10 @@ INSERT INTO order_items (
     line_total
 ) VALUES
     ('ITEM-PACK-2001-01', 'ORD-PACK-2001', 'PROD-PACK-001', 2, 500.00, 1000.00),
-    ('ITEM-PACK-2001-02', 'ORD-PACK-2001', 'PROD-PACK-003', 3, 600.00, 1800.00),
+    ('ITEM-PACK-2001-02', 'ORD-PACK-2001', 'PROD-PACK-004', 1, 1200.00, 1200.00),
+    ('ITEM-PACK-2001-03', 'ORD-PACK-2001', 'PROD-PACK-002', 1, 450.00, 450.00),
 
-    ('ITEM-PACK-2002-01', 'ORD-PACK-2002', 'PROD-PACK-004', 1, 1200.00, 1200.00),
+    ('ITEM-PACK-2002-01', 'ORD-PACK-2002', 'PROD-PACK-003', 2, 600.00, 1200.00),
     ('ITEM-PACK-2002-02', 'ORD-PACK-2002', 'PROD-PACK-005', 1, 399.00, 399.00),
 
     ('ITEM-PACK-2003-01', 'ORD-PACK-2003', 'PROD-PACK-002', 1, 450.00, 450.00),
@@ -93,18 +95,18 @@ INSERT INTO order_items (
     ('ITEM-PACK-2004-03', 'ORD-PACK-2004', 'PROD-PACK-003', 1, 600.00, 600.00),
     ('ITEM-PACK-2004-04', 'ORD-PACK-2004', 'PROD-PACK-005', 1, 400.00, 400.00),
 
-    ('ITEM-PACK-2005-01', 'ORD-PACK-2005', 'PROD-PACK-003', 1, 600.00, 600.00),
-    ('ITEM-PACK-2005-02', 'ORD-PACK-2005', 'PROD-PACK-005', 1, 399.00, 399.00),
+    ('ITEM-PACK-2005-01', 'ORD-PACK-2005', 'PROD-PACK-002', 1, 450.00, 450.00),
+    ('ITEM-PACK-2005-02', 'ORD-PACK-2005', 'PROD-PACK-005', 1, 549.00, 549.00),
 
     ('ITEM-PACK-2006-01', 'ORD-PACK-2006', 'PROD-PACK-003', 1, 600.00, 600.00),
-    ('ITEM-PACK-2006-02', 'ORD-PACK-2006', 'PROD-PACK-005', 1, 400.00, 400.00),
+    ('ITEM-PACK-2006-02', 'ORD-PACK-2006', 'PROD-PACK-001', 1, 400.00, 400.00),
 
     ('ITEM-PACK-2007-01', 'ORD-PACK-2007', 'PROD-PACK-004', 2, 1200.00, 2400.00),
     ('ITEM-PACK-2007-02', 'ORD-PACK-2007', 'PROD-PACK-003', 1, 600.00, 600.00),
     ('ITEM-PACK-2007-03', 'ORD-PACK-2007', 'PROD-PACK-005', 1, 448.00, 448.00),
 
-    ('ITEM-PACK-2008-01', 'ORD-PACK-2008', 'PROD-PACK-003', 1, 600.00, 600.00),
-    ('ITEM-PACK-2008-02', 'ORD-PACK-2008', 'PROD-PACK-005', 2, 499.00, 998.00)
+    ('ITEM-PACK-2008-01', 'ORD-PACK-2008', 'PROD-PACK-002', 2, 450.00, 900.00),
+    ('ITEM-PACK-2008-02', 'ORD-PACK-2008', 'PROD-PACK-005', 2, 349.00, 698.00)
 ON DUPLICATE KEY UPDATE
     ordered_quantity = VALUES(ordered_quantity),
     unit_price = VALUES(unit_price),

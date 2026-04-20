@@ -96,6 +96,9 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
         model.addObserver(this);
         initUI();
         refreshOrderTable();
+        refreshJobTable();
+        refreshPalletTable();
+        updateKpis();
     }
 
     // ---------------------------------------------------------------
@@ -750,6 +753,15 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
         }
     }
 
+    private void refreshJobTable() {
+        jobTableModel.setRowCount(0);
+        List<PackingJob> allJobs = new ArrayList<>(model.getAllJobs());
+        allJobs.sort(Comparator.comparing(PackingJob::getJobId));
+        for (PackingJob job : allJobs) {
+            addJobRow(job);
+        }
+    }
+
     private void refreshPalletTable() {
         palletTableModel.setRowCount(0);
         for (PackingUnit pallet : model.getAllUnits()) {
@@ -805,12 +817,12 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
     // ---------------------------------------------------------------
 
     private void addJobRow(PackingJob job) {
-        boolean hasFragile = job.getItems().stream().anyMatch(PackingItem::isFragile);
+        String strategyLabel = deriveStrategyLabel(job);
         jobTableModel.addRow(new Object[]{
                 job.getJobId(),
                 job.getOrderId(),
                 job.getItems().size(),
-                hasFragile ? "Fragile" : "Standard",
+            strategyLabel,
                 job.getStatus().getDisplayLabel(),
                 job.getProgress()
         });
@@ -819,11 +831,30 @@ public class PackingMainFrame extends JFrame implements PackingObserver {
     private void refreshJobRow(PackingJob job) {
         for (int i = 0; i < jobTableModel.getRowCount(); i++) {
             if (job.getJobId().equals(jobTableModel.getValueAt(i, 0))) {
+                jobTableModel.setValueAt(deriveStrategyLabel(job), i, 3);
                 jobTableModel.setValueAt(job.getStatus().getDisplayLabel(), i, 4);
                 jobTableModel.setValueAt(job.getProgress(), i, 5);
                 return;
             }
         }
+    }
+
+    private String deriveStrategyLabel(PackingJob job) {
+        boolean hasFragile = false;
+        boolean hasStandard = false;
+
+        for (PackingItem item : job.getItems()) {
+            if (item.isFragile()) {
+                hasFragile = true;
+            } else {
+                hasStandard = true;
+            }
+            if (hasFragile && hasStandard) {
+                return "Mixed";
+            }
+        }
+
+        return hasFragile ? "Fragile" : "Standard";
     }
 
     private void removeJobRow(PackingJob job) {
