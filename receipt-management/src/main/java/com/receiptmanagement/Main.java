@@ -1,6 +1,10 @@
 package com.receiptmanagement;
 
+import com.receiptmanagement.infrastructure.database.DatabaseAdapter;
+import com.receiptmanagement.port.DatabaseInterface;
 import com.receiptmanagement.ui.ReceiptManagementUI;
+
+import javax.swing.SwingUtilities;
 
 /**
  * Entry point for the Receipt Management System.
@@ -12,7 +16,9 @@ public final class Main {
     }
 
     public static void main(String[] args) {
-        ReceiptManagementUI.main(args);
+        SwingUtilities.invokeLater(() -> {
+            DatabaseInterface database = new DatabaseAdapter();
+            new ReceiptManagementUI(database);
+        });
     }
 }
-

@@ -4,15 +4,13 @@ package com.receiptmanagement.domain.model;
  * Enum for expense categorization.
  */
 public enum ExpenseCategory {
-    OFFICE_SUPPLIES("Office Supplies"),
-    TRAVEL("Travel"),
-    MEALS("Meals & Entertainment"),
-    UTILITIES("Utilities"),
-    SOFTWARE("Software & Licenses"),
-    EQUIPMENT("Equipment"),
-    MAINTENANCE("Maintenance & Repairs"),
-    CONSULTING("Consulting Services"),
-    MARKETING("Marketing"),
+    PACKAGING("Packaging"),
+    REPAIR("Repair"),
+    PROCUREMENT("Procurement"),
+    WAREHOUSE("Warehouse"),
+    LOGISTICS("Logistics"),
+    INVENTORY("Inventory"),
+    RETURNS("Returns"),
     OTHER("Other");
 
     private final String displayName;
@@ -34,32 +32,26 @@ public enum ExpenseCategory {
             return OTHER;
         }
 
-        if (containsAny(text, "hotel", "airline", "uber", "taxi", "train")) {
-            return TRAVEL;
+        if (containsAny(text, "package", "packaging", "packing", "box", "bundle")) {
+            return PACKAGING;
         }
-        if (containsAny(text, "restaurant", "cafe", "pizza", "burger")) {
-            return MEALS;
+        if (containsAny(text, "repair", "maintenance", "damage", "defect", "fix")) {
+            return REPAIR;
         }
-        if (containsAny(text, "power", "water", "gas", "electric")) {
-            return UTILITIES;
+        if (containsAny(text, "purchase", "supplier", "procurement", "invoice", "po")) {
+            return PROCUREMENT;
         }
-        if (containsAny(text, "microsoft", "adobe", "salesforce", "software", "aws", "github")) {
-            return SOFTWARE;
+        if (containsAny(text, "warehouse", "storage", "bin", "zone")) {
+            return WAREHOUSE;
         }
-        if (containsAny(text, "apple", "dell", "hp", "computer", "monitor")) {
-            return EQUIPMENT;
+        if (containsAny(text, "delivery", "shipment", "logistics", "dispatch", "route")) {
+            return LOGISTICS;
         }
-        if (containsAny(text, "plumber", "electrician", "repair", "maintenance")) {
-            return MAINTENANCE;
+        if (containsAny(text, "inventory", "stock", "goods", "item", "sku")) {
+            return INVENTORY;
         }
-        if (containsAny(text, "consultant", "consulting", "analyst")) {
-            return CONSULTING;
-        }
-        if (containsAny(text, "ads", "marketing", "advertising", "social")) {
-            return MARKETING;
-        }
-        if (containsAny(text, "pen", "paper", "office", "staples")) {
-            return OFFICE_SUPPLIES;
+        if (containsAny(text, "return", "refund", "replacement")) {
+            return RETURNS;
         }
 
         return OTHER;
@@ -72,5 +64,10 @@ public enum ExpenseCategory {
             }
         }
         return false;
+    }
+
+    @Override
+    public String toString() {
+        return displayName;
     }
 }

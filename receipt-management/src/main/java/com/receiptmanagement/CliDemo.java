@@ -6,7 +6,7 @@ import com.receiptmanagement.application.ReceiptFormatter;
 import com.receiptmanagement.application.ReceiptGenerationService;
 import com.receiptmanagement.domain.model.CustomerInformation;
 import com.receiptmanagement.domain.model.PaymentDetails;
-import com.receiptmanagement.infrastructure.database.InMemoryDatabase;
+import com.receiptmanagement.infrastructure.database.DatabaseAdapter;
 import com.receiptmanagement.infrastructure.exception.ConsoleExceptionHandler;
 import com.receiptmanagement.infrastructure.formatter.PlainTextReceiptFormatter;
 import com.receiptmanagement.infrastructure.logging.DatabaseLogger;
@@ -29,7 +29,7 @@ public final class CliDemo {
     }
 
     public static void main(String[] args) {
-        DatabaseInterface database = new InMemoryDatabase();
+        DatabaseInterface database = new DatabaseAdapter();
         Logger logger = new DatabaseLogger(database);
         PaymentValidation paymentValidation = new StandardPaymentValidation();
         ReceiptFormatter receiptFormatter = new PlainTextReceiptFormatter();

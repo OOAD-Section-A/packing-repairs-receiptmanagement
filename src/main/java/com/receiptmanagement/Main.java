@@ -1,79 +1,43 @@
 package com.receiptmanagement;
 
-import com.receiptmanagement.application.Logger;
-import com.receiptmanagement.application.PaymentValidation;
-import com.receiptmanagement.application.ReceiptFormatter;
-import com.receiptmanagement.application.ReceiptGenerationService;
-import com.receiptmanagement.domain.model.CustomerInformation;
-import com.receiptmanagement.domain.model.PaymentDetails;
-import com.receiptmanagement.infrastructure.database.InMemoryDatabase;
-import com.receiptmanagement.infrastructure.exception.ConsoleExceptionHandler;
-import com.receiptmanagement.infrastructure.formatter.PlainTextReceiptFormatter;
-import com.receiptmanagement.infrastructure.logging.DatabaseLogger;
-import com.receiptmanagement.infrastructure.notification.ConsoleNotificationSystem;
-import com.receiptmanagement.infrastructure.validation.StandardPaymentValidation;
+import com.receiptmanagement.infrastructure.database.DatabaseAdapter;
 import com.receiptmanagement.port.DatabaseInterface;
-import com.receiptmanagement.port.ExceptionHandlerInterface;
-import com.receiptmanagement.port.NotificationSystemInterface;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import com.receiptmanagement.ui.ReceiptManagementUI;
 
-public final class Main {
-
-    private Main() {
-    }
+public class Main {
 
     public static void main(String[] args) {
-        DatabaseInterface database = new InMemoryDatabase();
-        Logger logger = new DatabaseLogger(database);
-        PaymentValidation paymentValidation = new StandardPaymentValidation();
-        ReceiptFormatter receiptFormatter = new PlainTextReceiptFormatter();
-        NotificationSystemInterface notificationSystem = new ConsoleNotificationSystem();
-        ExceptionHandlerInterface exceptionHandler = new ConsoleExceptionHandler();
 
-        ReceiptGenerationService receiptGenerationService = new ReceiptGenerationService(
-                paymentValidation,
-                receiptFormatter,
-                logger,
-                notificationSystem,
-                exceptionHandler
-        );
+        try {
 
-        CustomerInformation customer = new CustomerInformation(
-                "CUST-1001",
-                "Anirudh Sharma",
-                "anirudh.sharma@example.com"
-        );
+            DatabaseInterface database =
+                    new DatabaseAdapter();
 
-        PaymentDetails validPayment = new PaymentDetails(
-                "PAY-2001",
-                new BigDecimal("2499.99"),
-                "INR",
-                "UPI",
-                true,
-                LocalDateTime.now()
-        );
+            System.out.println(
+                    "SCM Receipt Management System Starting..."
+            );
 
-        PaymentDetails invalidPayment = new PaymentDetails(
-                "PAY-2002",
-                BigDecimal.ZERO,
-                "INR",
-                "CHEQUE",
-                false,
-                LocalDateTime.now()
-        );
+            database.saveLog(
+                    "System initialized successfully."
+            );
 
-        System.out.println("=== Valid Payment Flow ===");
-        receiptGenerationService.generateReceipt(validPayment, customer)
-                .ifPresent(receipt -> System.out.println("Generated receipt id: " + receipt.getReceiptId()));
+            database.readLogs()
+                    .forEach(System.out::println);
 
-        System.out.println();
-        System.out.println("=== Invalid Payment Flow ===");
-        receiptGenerationService.generateReceipt(invalidPayment, customer);
+            javax.swing.SwingUtilities.invokeLater(
+                    ReceiptManagementUI::new
+            );
 
-        System.out.println();
-        System.out.println("=== Persisted Logs ===");
-        database.readLogs().forEach(System.out::println);
+        }
+
+        catch (Exception e) {
+
+            System.err.println(
+                    "System failed to start: "
+                            + e.getMessage()
+            );
+
+            e.printStackTrace();
+        }
     }
 }
-
