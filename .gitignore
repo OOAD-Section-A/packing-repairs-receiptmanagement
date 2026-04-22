@@ -1,15 +1,62 @@
-# Java build outputs
-**/bin/
-**/*.class
-**/target/
-# Logs
-**/logs/*.log
-
-# IDE files
+# ======================
+# IDE / Editor files
+# ======================
 .vscode/
 .idea/
-*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
+# ======================
+# Node.js
+# ======================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# ======================
+# Environment files
+# ======================
+.env
+.env.*
+
+# ======================
 # OS files
+# ======================
 .DS_Store
 Thumbs.db
+
+# ======================
+# Logs
+# ======================
+*.log
+
+# ======================
+# Build / dist
+# ======================
+dist/
+build/
+
+# ======================
+# Misc
+# ======================
+*.tmp
+*.swp
+
+# Java / Maven
+target/
+out/
+
+# Compiled class files
+*.class
