@@ -24,13 +24,39 @@
             <systemPath>${project.basedir}/lib/database-module-1.0.0-SNAPSHOT-standalone.jar</systemPath>
         </dependency>
 
-        <!-- SCM Exception Handler (provided by exception subsystem team) -->
+        <!-- SCM Exception Handler v3 (provided by exception subsystem team) -->
         <dependency>
             <groupId>com.scm</groupId>
             <artifactId>scm-exception-handler</artifactId>
             <version>3.0</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/scm-exception-handler-v3.jar</systemPath>
+        </dependency>
+
+        <!-- SCM Exception Viewer GUI (provided by exception subsystem team) -->
+        <dependency>
+            <groupId>com.scm</groupId>
+            <artifactId>scm-exception-viewer-gui</artifactId>
+            <version>3.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/scm-exception-viewer-gui.jar</systemPath>
+        </dependency>
+
+        <!-- JNA dependencies (required by scm-exception-handler-v3) -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+            <version>5.18.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/jna-5.18.1.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+            <version>5.18.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/jna-platform-5.18.1.jar</systemPath>
         </dependency>
 
         <!-- FlatLaf for modern Swing Look and Feel -->
